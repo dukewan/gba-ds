@@ -29,10 +29,15 @@
 #include <strings.h>
 #include <fcntl.h>
 
+/* (counted: 游典's core takes many in a row while the pinball table's copies run as a sign their code
+ * was patched in the wrong places, a romhack's, and closes them; and only some of a flood are logged) */
+volatile unsigned emu_log_errors;
 static void quiet_log(struct mLogger* l, int cat, enum mLogLevel level, const char* fmt, va_list args) {
 	(void) l;
 	(void) cat;
 	if (level & (mLOG_FATAL | mLOG_ERROR)) {
+		unsigned n = ++emu_log_errors;
+		if (n > 20 && n % 1000) return;
 		vfprintf(stderr, fmt, args);
 		fputc('\n', stderr);
 	}

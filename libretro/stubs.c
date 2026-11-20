@@ -1,0 +1,93 @@
+/* GENERATED (libretro/make_stubs.py): what GBA DS's game.c names of SDL, ui.c, hotkeys.c, bezel.c and
+ * android.c but never calls in 游典's core (no window, no menus, no sound device of its own). Each
+ * function returns 0 / NULL; the variables are zeroed room. libretro/shim.c has the ones that are called. */
+#include <stdint.h>
+
+intptr_t SDL_AudioInit(void) { return 0; }
+intptr_t SDL_AudioQuit(void) { return 0; }
+intptr_t SDL_AudioStreamGet(void) { return 0; }
+intptr_t SDL_AudioStreamPut(void) { return 0; }
+intptr_t SDL_ClearQueuedAudio(void) { return 0; }
+intptr_t SDL_CloseAudioDevice(void) { return 0; }
+intptr_t SDL_Delay(void) { return 0; }
+intptr_t SDL_FreeAudioStream(void) { return 0; }
+intptr_t SDL_GetCurrentAudioDriver(void) { return 0; }
+intptr_t SDL_GetCurrentVideoDriver(void) { return 0; }
+intptr_t SDL_GetError(void) { return 0; }
+intptr_t SDL_GetPowerInfo(void) { return 0; }
+intptr_t SDL_GetPreferredLocales(void) { return 0; }
+intptr_t SDL_GetQueuedAudioSize(void) { return 0; }
+intptr_t SDL_NewAudioStream(void) { return 0; }
+intptr_t SDL_OpenAudioDevice(void) { return 0; }
+intptr_t SDL_PauseAudioDevice(void) { return 0; }
+intptr_t SDL_QueueAudio(void) { return 0; }
+intptr_t SDL_RWFromFile(void) { return 0; }
+intptr_t SDL_SaveBMP_RW(void) { return 0; }
+intptr_t SDL_free(void) { return 0; }
+intptr_t android_home(void) { return 0; }
+intptr_t android_perf_init(void) { return 0; }
+intptr_t android_perf_report(void) { return 0; }
+intptr_t android_pin_game_thread(void) { return 0; }
+intptr_t android_pin_worker_thread(void) { return 0; }
+intptr_t android_raise_thread(void) { return 0; }
+intptr_t android_set_pinning(void) { return 0; }
+intptr_t bezel_surface(void) { return 0; }
+uint64_t btnNow[512];
+uint64_t btnPrev[512];
+uint64_t hotkeyBtnNames[512];
+intptr_t hotkeys_resolve(void) { return 0; }
+intptr_t ui_accent_color(void) { return 0; }
+intptr_t ui_brightness(void) { return 0; }
+intptr_t ui_clear(void) { return 0; }
+intptr_t ui_clip(void) { return 0; }
+intptr_t ui_color_correction(void) { return 0; }
+intptr_t ui_dim(void) { return 0; }
+intptr_t ui_display_hz(void) { return 0; }
+intptr_t ui_events(void) { return 0; }
+intptr_t ui_fill(void) { return 0; }
+intptr_t ui_fill_round(void) { return 0; }
+intptr_t ui_font_text(void) { return 0; }
+intptr_t ui_font_width(void) { return 0; }
+intptr_t ui_font_wrap(void) { return 0; }
+intptr_t ui_image(void) { return 0; }
+intptr_t ui_image_pixels(void) { return 0; }
+intptr_t ui_image_rect(void) { return 0; }
+intptr_t ui_key(void) { return 0; }
+intptr_t ui_key_ink(void) { return 0; }
+intptr_t ui_key_mid(void) { return 0; }
+intptr_t ui_label(void) { return 0; }
+intptr_t ui_label_width(void) { return 0; }
+intptr_t ui_last_present_ms(void) { return 0; }
+intptr_t ui_last_redraws(void) { return 0; }
+intptr_t ui_layout_pictures(void) { return 0; }
+intptr_t ui_load_brand(void) { return 0; }
+intptr_t ui_load_image(void) { return 0; }
+intptr_t ui_load_surface(void) { return 0; }
+intptr_t ui_logo_note(void) { return 0; }
+intptr_t ui_next_pointer(void) { return 0; }
+intptr_t ui_on_background(void) { return 0; }
+intptr_t ui_on_foreground(void) { return 0; }
+intptr_t ui_osd(void) { return 0; }
+intptr_t ui_osd_long(void) { return 0; }
+intptr_t ui_osd_text(void) { return 0; }
+intptr_t ui_other_screen(void) { return 0; }
+intptr_t ui_present(void) { return 0; }
+intptr_t ui_present_budget(void) { return 0; }
+intptr_t ui_px(void) { return 0; }
+intptr_t ui_read_buttons(void) { return 0; }
+intptr_t ui_render_reset(void) { return 0; }
+intptr_t ui_screens_differ(void) { return 0; }
+intptr_t ui_screenshot_stacked(void) { return 0; }
+intptr_t ui_script_load(void) { return 0; }
+intptr_t ui_script_quiet(void) { return 0; }
+intptr_t ui_scripted(void) { return 0; }
+intptr_t ui_shader(void) { return 0; }
+intptr_t ui_stick_dpad(void) { return 0; }
+intptr_t ui_sync_view(void) { return 0; }
+intptr_t ui_text(void) { return 0; }
+intptr_t ui_textures_reset(void) { return 0; }
+intptr_t ui_theme_light(void) { return 0; }
+intptr_t ui_tick(void) { return 0; }
+intptr_t ui_title_block(void) { return 0; }
+intptr_t ui_touch_screen(void) { return 0; }
+intptr_t ui_volume(void) { return 0; }

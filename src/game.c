@@ -9447,3 +9447,8 @@ static enum GameExit game_run_inner(Config* c, const char* rom, bool fromLibrary
 	bezelKey[0][0] = bezelKey[1][0] = 0;
 	return exitTo;
 }
+
+#ifdef GBADS_LIBRETRO
+/* 游典's libretro core: the frame loop's second-screen part, with game.c's own state */
+#include "../libretro/lr_game.inc"
+#endif
