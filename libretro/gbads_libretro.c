@@ -156,7 +156,8 @@ static void second_setup(const char* code) {
 	const MapProfile* lp = profile_find(code);
 	memprobe_virtual = lp ? lp->virt : NULL;
 	if (!mc) {
-		logf_(RETRO_LOG_INFO, "no second-screen profile for %s: one screen", code);
+		if (lp) logf_(RETRO_LOG_INFO, "%s (%s): its second screen is the HUD split / the pinball table, not in this core yet: one screen", lp->title, code);
+		else logf_(RETRO_LOG_INFO, "no second-screen profile for %s: one screen", code);
 		return;
 	}
 	logf_(RETRO_LOG_INFO, "second-screen profile: %s", mapcap_title(mc));
@@ -258,7 +259,8 @@ static void second_frame(void) {
 	const char* why = NULL;
 	int fails = mapcap_failures(mc, &why);
 	if (fails != lastFails) {
-		if (fails && why) logf_(RETRO_LOG_DEBUG, "capture failed (%d in a row): %s", fails, why);
+		/* (the first of a run, and each tenth: a member's log says why the second screen stayed empty) */
+		if (fails && why && (fails == 1 || fails % 10 == 0)) logf_(RETRO_LOG_INFO, "capture failed (%d in a row): %s", fails, why);
 		lastFails = fails;
 	}
 	bool cheapFail = why && !strcmp(why, "map button did nothing");
@@ -277,6 +279,7 @@ static void second_frame(void) {
 	if (fresh && !mapcap_in_menu(mc, &emu)) {
 		bool pages = mapRes.nFrames > 1 && mapRes.frameStep >= 60;
 		if (!pages) mapAnimStart = frameCount;
+		if (mapShownIdx < 0) logf_(RETRO_LOG_INFO, "second screen: %dx%d, %d frame(s), at frame %llu", mapRes.w, mapRes.h, mapRes.nFrames, frameCount);
 		mapShownIdx = 0;
 	}
 	if (mapShownIdx >= 0 && mapRes.nFrames > 1 && !(ip && ip->mapStill)) {
