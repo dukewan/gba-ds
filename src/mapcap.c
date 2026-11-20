@@ -1,6 +1,6 @@
 #include "mapcap.h"
 #include "profiles.h"
-#ifdef __ANDROID__
+#if defined(__ANDROID__) && !defined(GBADS_LIBRETRO)
 #include "android.h"
 #endif
 
@@ -733,7 +733,7 @@ static void* worker(void* arg) {
 #ifndef __wasi__
 	setpriority(PRIO_PROCESS, (id_t) syscall(SYS_gettid), 10);
 #endif
-#ifdef __ANDROID__
+#if defined(__ANDROID__) && !defined(GBADS_LIBRETRO)
 	android_pin_worker_thread("map capture");
 #endif
 	pthread_mutex_lock(&mc->lock);

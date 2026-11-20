@@ -80,6 +80,12 @@ bool emu_cancelled(const Emu* e);
 void emu_reset(Emu* e);
 
 size_t emu_state_size(Emu* e);
+#ifdef GBADS_LIBRETRO
+/* States in mGBA's libretro core's form (游典's core: the two cores' states go both ways) */
+size_t emu_state_named_size(Emu* e);
+bool emu_state_named_save(Emu* e, void* buf, size_t size);
+bool emu_state_named_load(Emu* e, const void* buf, size_t size);
+#endif
 bool emu_state_save(Emu* e, void* buf);
 bool emu_state_load(Emu* e, const void* buf);
 /* Rewind (mGBA's, one buffer of `entries` states for one core): append a

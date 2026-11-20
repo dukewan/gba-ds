@@ -50,7 +50,7 @@ static struct mLogger quietLogger = { .log = quiet_log };
  * /storage/roms folder, can hold an fsync just as long. */
 #include <unistd.h>
 #include <sys/stat.h>
-#ifdef __ANDROID__
+#if defined(__ANDROID__) && !defined(GBADS_LIBRETRO)
 #include "android.h"
 #endif
 
@@ -66,7 +66,7 @@ typedef struct {
 
 static void* async_save_worker(void* arg) {
 	AsyncSave* a = arg;
-#ifdef __ANDROID__
+#if defined(__ANDROID__) && !defined(GBADS_LIBRETRO)
 	android_pin_worker_thread("save writer"); /* threads start on their creator's cores: not the game's */
 #endif
 	pthread_mutex_lock(&a->lock);
@@ -463,6 +463,40 @@ bool emu_state_load(Emu* e, const void* buf) {
 	split_resync(e);
 	return ok;
 }
+
+#ifdef GBADS_LIBRETRO
+/* 游典's libretro core: states as mGBA's own libretro core makes them (mCoreSaveStateNamed, the save
+ * data and the clock in it), so a game's states go between the two cores */
+size_t emu_state_named_size(Emu* e) {
+	struct VFile* vf = VFileMemChunk(NULL, 0);
+	mCoreSaveStateNamed(e->core, vf, SAVESTATE_SAVEDATA | SAVESTATE_RTC);
+	size_t n = (size_t) vf->size(vf);
+	vf->close(vf);
+	return n;
+}
+
+bool emu_state_named_save(Emu* e, void* buf, size_t size) {
+	struct VFile* vf = VFileMemChunk(NULL, 0);
+	mCoreSaveStateNamed(e->core, vf, SAVESTATE_SAVEDATA | SAVESTATE_RTC);
+	ssize_t n = vf->size(vf);
+	bool ok = (ssize_t) size >= n;
+	if (ok) {
+		vf->seek(vf, 0, SEEK_SET);
+		vf->read(vf, buf, (size_t) n);
+	}
+	vf->close(vf);
+	return ok;
+}
+
+bool emu_state_named_load(Emu* e, const void* buf, size_t size) {
+	struct VFile* vf = VFileFromConstMemory(buf, size);
+	bool ok = mCoreLoadStateNamed(e->core, vf, SAVESTATE_RTC);
+	vf->close(vf);
+	rtc_pin(e);
+	split_resync(e);
+	return ok;
+}
+#endif
 
 /* ------------------------------------------------------------ rewind */
 
