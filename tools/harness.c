@@ -24,6 +24,9 @@
 
 #include <mgba/flags.h>
 #include <mgba/core/core.h>
+#include <mgba/core/serialize.h>
+#include <mgba-util/vfs.h>
+#include <fcntl.h>
 
 #include <ctype.h>
 #include <stdio.h>
@@ -100,7 +103,108 @@ int main(int argc, char** argv) {
 		if (!*p || *p == '#') continue;
 		char cmd[32] = "", a1[256] = "", a2[64] = "", a3[64] = "";
 		sscanf(p, "%31s %255s %63s %63s", cmd, a1, a2, a3);
-		if (!strcmp(cmd, "hold")) {
+		if (!strcmp(cmd, "auto")) {
+			/* auto MAXFRAMES NAME: plays on its own (START / A taps through intros, menus and name entry,
+			 * walking about in between) until the profile says it's in the game for 10 s at once — the map
+			 * actually captured, for a map game — then writes NAME.state in mGBA's state-file form (save
+			 * data and clock in it: what 游典's core and GBA DS's own states both read). Shots every 20 s. */
+			const MapProfile* pf = profile_find(emu.gameCode);
+			int maxf = atoi(a1), good = 0, step = 0;
+			bool done = false;
+			while ((int) frameNo < maxf && !done) {
+				/* not in the game yet: START and A only (a menu's first choice is the new game; START jumps a
+				 * name entry to its OK); in it: walking about, A for its talk */
+				static const struct { const char* k; int n; } pre[] = {
+					{ "START", 4 }, { "-", 40 }, { "A", 4 }, { "-", 40 }, { "A", 4 }, { "-", 40 },
+				}, play[] = {
+					{ "RIGHT", 60 }, { "A", 4 }, { "-", 20 }, { "LEFT", 30 }, { "A", 4 }, { "-", 20 },
+				};
+				/* AUTO_PATTERN 1: A only; 2: A and START with DOWN (a menu whose new game is the second) */
+				static const struct { const char* k; int n; } preA[] = {
+					{ "A", 4 }, { "-", 40 }, { "A", 4 }, { "-", 40 }, { "A", 4 }, { "-", 40 },
+				}, preB[] = {
+					{ "START", 4 }, { "-", 40 }, { "DOWN", 4 }, { "-", 20 }, { "A", 4 }, { "-", 40 },
+				};
+				int pt = getenv("AUTO_PATTERN") ? atoi(getenv("AUTO_PATTERN")) : 0;
+				bool inGame = good > 0;
+				int np = 6;
+				uint32_t k = parse_keys(inGame ? play[step % np].k : pt == 1 ? preA[step % np].k : pt == 2 ? preB[step % np].k : pre[step % np].k);
+				int n = inGame ? play[step % np].n : pt == 1 ? preA[step % np].n : pt == 2 ? preB[step % np].n : pre[step % np].n;
+				++step;
+				run(k, n);
+				bool in = false;
+				if (mc) in = mapcap_live_ok(mc, &emu) && !mapcap_in_menu(mc, &emu);
+				else if (pf && pf->hud.on[0].addr) in = memprobes_match(pf->hud.on, 4, &emu);
+				else if (pf && pf->tall.on[0].addr) in = memprobes_match(pf->tall.on, 2, &emu);
+				good = in ? good + n : 0;
+				if (getenv("AUTO_TRACE") && frameNo % 600 < (unsigned) n) fprintf(stderr, "frame %u in %d good %d live %d menu %d\n", frameNo, in, good,
+					mc ? mapcap_live_ok(mc, &emu) : -1, mc ? mapcap_in_menu(mc, &emu) : -1);
+				if (good >= 600) {
+					if (mc) {
+						MapResult r = mapcap_capture_sync(mc, &emu);
+						/* the profile's probes can match an attract demo too (Circle of the Moon's): only a map
+						 * actually opened counts; else back to START and A */
+						if (!r.ok) { good = 0; continue; }
+						char mp[600];
+						snprintf(mp, sizeof(mp), "%s/%s.map.png", outdir, a2);
+						write_png(mp, r.pixels, r.w, r.h, r.w);
+					}
+					done = true;
+				}
+				if (frameNo % 1200 < (unsigned) n) {
+					char nm[300];
+					snprintf(nm, sizeof(nm), "%s_%05u", a2, frameNo);
+					shot(nm);
+				}
+			}
+			/* the moment it was found in the game, kept: the walk below may end in a menu */
+			size_t ssz = emu_state_size(&emu);
+			void* inState = done ? malloc(ssz) : NULL;
+			if (inState) emu_state_save(&emu, inState);
+			/* (a3: frames more of walking about once in, deeper into the game) */
+			for (int extra = a3[0] ? atoi(a3) : 0, i = 0; done && extra > 0; ++i) {
+				static const char* walk[] = { "RIGHT", "A", "-", "RIGHT", "UP", "A", "LEFT", "DOWN" };
+				run(parse_keys(walk[i % 8]), 30);
+				extra -= 30;
+			}
+			if (inState) {
+				bool still = false;
+				if (mc) still = mapcap_live_ok(mc, &emu) && !mapcap_in_menu(mc, &emu);
+				else if (pf && pf->hud.on[0].addr) still = memprobes_match(pf->hud.on, 4, &emu);
+				else if (pf && pf->tall.on[0].addr) still = memprobes_match(pf->tall.on, 2, &emu);
+				if (!still) {
+					emu_state_load(&emu, inState);
+					run(0, 2);
+					printf("auto %s: back to where it was found in the game (the walk ended out of it)\n", a2);
+				}
+				free(inState);
+			}
+			if (done && mc) {
+				MapResult r = mapcap_capture_sync(mc, &emu);
+				if (r.ok) {
+					char mp[600];
+					snprintf(mp, sizeof(mp), "%s/%s.map.png", outdir, a2);
+					write_png(mp, r.pixels, r.w, r.h, r.w);
+				}
+			}
+			char sp[600];
+			snprintf(sp, sizeof(sp), "%s/%s.%s", outdir, a2, done ? "state" : "notyet.state");
+			/* (into memory first: mGBA maps the file it writes a state to, which a write-only file can't be) */
+			struct VFile* vf = VFileMemChunk(NULL, 0);
+			mCoreSaveStateNamed(emu.core, vf, SAVESTATE_SAVEDATA | SAVESTATE_RTC);
+			ssize_t vn = vf->size(vf);
+			void* vb = malloc((size_t) vn);
+			vf->seek(vf, 0, SEEK_SET);
+			vf->read(vf, vb, (size_t) vn);
+			vf->close(vf);
+			FILE* sf = fopen(sp, "wb");
+			if (sf) fwrite(vb, 1, (size_t) vn, sf), fclose(sf);
+			free(vb);
+			char fin[300];
+			snprintf(fin, sizeof(fin), "%s_end", a2);
+			shot(fin);
+			printf("auto %s: %s at frame %u\n", a2, done ? "in the game" : "not in the game", frameNo);
+		} else if (!strcmp(cmd, "hold")) {
 			run(parse_keys(a1), atoi(a2));
 		} else if (!strcmp(cmd, "wait")) {
 			run(0, atoi(a1));
