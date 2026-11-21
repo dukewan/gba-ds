@@ -4238,6 +4238,49 @@ static const char* bk_compose(Emu* s, const void* state, uint32_t* const* out, i
 	return NULL;
 }
 
+/* ------------------------------ The Legend of Zelda: The Minish Cap (游典's)
+ * Two pages, 5 seconds each: the pause screen's Items, then its Collection (hearts, sword, figurines)
+ * — the map page comes late in the story. Opened on a hidden copy with START (it opens on the page
+ * last looked at: told apart by the Collection's 睡眠 button, blue at (150, 121)), then R. Where START
+ * opens nothing (a conversation, a scene): the quick failure, the last pictures stay. */
+#define MC_PAUSED(s) (emu_read16((s), 0x04000000) == 0x1D40)
+static bool mc_settle(Emu* s, int frames) {
+	for (int f = 0; f < frames; ++f) {
+		emu_frame(s, 0);
+		if (!MC_PAUSED(s)) return false;
+	}
+	return true;
+}
+static bool mc_collection(const uint32_t* fb) {
+	uint32_t c = fb[121 * GBA_W + 150];
+	int r = c & 0xFF, g = (c >> 8) & 0xFF, b = (c >> 16) & 0xFF;
+	return b > 200 && r < 120;
+}
+static const char* mc_compose(Emu* s, const void* state, uint32_t* const* out, int* nOut, int* step, int w, int h) {
+	int max = *nOut;
+	*nOut = 1;
+	*step = 300;
+	if (w < GBA_W || h < GBA_H) return "picture too small";
+	if (!emu_state_load(s, state)) return "state load failed";
+	emu_frame(s, 0);
+	if (MC_PAUSED(s)) return "screen already looks like the map";
+	aw_run(s, K_START, 4);
+	int f = 0;
+	while (f < 40 && !MC_PAUSED(s)) emu_frame(s, 0), ++f;
+	if (!MC_PAUSED(s)) return "map button did nothing";
+	if (!mc_settle(s, 45)) return "the pause screen didn't settle";
+	bool coll = mc_collection(s->fb);
+	bk_copy(s, out[coll ? 1 % max : 0], w, h);
+	if (max < 2) return NULL;
+	aw_run(s, K_R, 4);
+	aw_run(s, 0, 8);
+	if (!mc_settle(s, 80)) return NULL; /* (the page turn slides for about a second) */
+	if (mc_collection(s->fb) == coll) return coll ? "not the Items page" : NULL; /* (the R didn't turn it) */
+	bk_copy(s, out[coll ? 0 : 1], w, h);
+	*nOut = 2;
+	return NULL;
+}
+
 /* Wario Land 4 (both releases): the screen the game is on, 0x03000C3A
  * (0 scenes, 1 the hub, a passage's level select, the vortex and tally,
  * 2 in a level, 4 the pause screen up, 9 the file screen), what it's
@@ -8529,6 +8572,23 @@ static const MapProfile profiles[] = {
 		 * corner by its mask (tools/make_logo_masks.py), without the sky,
 		 * the roller coaster or the Muppets */
 		.logo = { .wait = 2300, .mask = &logoMaskAMW, .rev = 1 /* (cut along the official logo's outline: test builds' first cut made again) */ },
+	},
+	{
+		/* The Legend of Zelda: The Minish Cap (游典's, github.com/dukewan/gba-ds youdian: not in GBA DS's
+		 * list). Its map page comes late in the story; from the start the pause screen's Items and Collection
+		 * pages are shown in turn (mc_compose). Found with tools/harness: walking
+		 * about, 0x02000083 is 4 and 0x02000086 is 1 (the title 0 / 2, the opening's scenes 14, paused
+		 * 0); the pause screen is DISPCNT 0x1D40 (play 0x1740 / 0x1F40); its tab, the L and R buttons
+		 * and the frame's grey are fixed (the backdrop's leaves move). The title's ZELDA is BG1. */
+		.codes = { "BZMJ", "BZME", "BZMP" },
+		.title = "The Legend of Zelda: The Minish Cap",
+		.composePages = mc_compose,
+		.stillPick = STILL_FIRST,
+		.crop_w = GBA_W,
+		.crop_h = GBA_H,
+		.live = { { 0x02000083, 0xFF, 0x04, 1 }, { 0x02000086, 0xFF, 0x01, 1 } },
+		.menu = { { 0x02000083, 0xFF, 0x00, 1 } },
+		.logo = { .steps = { { 0, 600 } }, .layer = 1, .maxY = 100 },
 	},
 	{
 		/* Kirby: Nightmare in Dream Land (游典's, github.com/dukewan/gba-ds youdian: not in GBA DS's list).

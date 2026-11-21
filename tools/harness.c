@@ -137,6 +137,21 @@ int main(int argc, char** argv) {
 				else if (pf && pf->hud.on[0].addr) in = memprobes_match(pf->hud.on, 4, &emu);
 				else if (pf && pf->tall.on[0].addr) in = memprobes_match(pf->tall.on, 2, &emu);
 				good = in ? good + n : 0;
+				/* AUTO_SAVE_AT=frame: a state there too (auto_at.state), to go on by hand from */
+				if (getenv("AUTO_SAVE_AT") && frameNo >= (unsigned) atoi(getenv("AUTO_SAVE_AT")) && frameNo < (unsigned) atoi(getenv("AUTO_SAVE_AT")) + (unsigned) n) {
+					char ap[600];
+					snprintf(ap, sizeof(ap), "%s/auto_at.state", outdir);
+					struct VFile* av = VFileMemChunk(NULL, 0);
+					mCoreSaveStateNamed(emu.core, av, SAVESTATE_SAVEDATA | SAVESTATE_RTC);
+					ssize_t an = av->size(av);
+					void* ab = malloc((size_t) an);
+					av->seek(av, 0, SEEK_SET);
+					av->read(av, ab, (size_t) an);
+					av->close(av);
+					FILE* af = fopen(ap, "wb");
+					if (af) fwrite(ab, 1, (size_t) an, af), fclose(af);
+					free(ab);
+				}
 				if (getenv("AUTO_TRACE") && frameNo % 600 < (unsigned) n) fprintf(stderr, "frame %u in %d good %d live %d menu %d\n", frameNo, in, good,
 					mc ? mapcap_live_ok(mc, &emu) : -1, mc ? mapcap_in_menu(mc, &emu) : -1);
 				if (good >= 600) {
