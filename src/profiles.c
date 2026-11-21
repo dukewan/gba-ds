@@ -11153,6 +11153,12 @@ static const Variant variants[] = {
 	 * comes ~700 frames after A); its races not tried (f-zero-gp-legend.md) */
 	{ "BFZP", "BFZE", 0, lang_menu },
 	{ "AFZC", "AFZE", 0, fzm_chn },
+	/* 国行 (iQue, 神游) and its Chinese releases: 游典's (github.com/dukewan/gba-ds youdian), each
+	 * shift found by a RAM search on the iQue ROM (the profile's game-state byte, play / pause / play)
+	 * and checked with tools/harness auto (the map captured) */
+	{ "AMTC", "AMTE", 0x34, NULL },
+	/* Super Mario Advance 2 (iQue): Japan's RAM (its pause byte 0x03002BB3, the game mode 3 above) */
+	{ "AA2C", "AA2E", 0, sma2_jpn },
 	{ "BCNJ", "BCNE", 0, cnk_jpn },
 	{ "AVRJ", "AVRE", 0, vr3_jpn },
 	{ "A2GJ", "A2GE", 0, gt3_jpn },
