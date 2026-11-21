@@ -46,6 +46,7 @@ static retro_input_state_t input_state_cb;
 static retro_log_printf_t log_cb;
 
 static bool loaded;
+static unsigned avRate; /* the sound rate last given in retro_get_system_av_info */
 static char romPath[4096];
 static void* savedata;
 static bool saveAttached;
@@ -157,6 +158,7 @@ void retro_get_system_av_info(struct retro_system_av_info* info) {
 	info->geometry.aspect_ratio = (float) OUT_W / OUT_H;
 	info->timing.fps = GBA_FPS;
 	info->timing.sample_rate = loaded ? emu_audio_rate(&emu) : 32768;
+	avRate = (unsigned) info->timing.sample_rate;
 }
 
 /* Where GBA DS keeps what it makes of a game (the logo it extracts from the title screen): beside the core,
@@ -306,6 +308,16 @@ void retro_run(void) {
 	if (dimmed) for (int i = GBA_W * GBA_H; i < OUT_W * OUT_H; ++i) out[i] = dim(out[i], 120);
 	video_cb(out, OUT_W, OUT_H, OUT_W * sizeof(uint32_t));
 
+	/* The game's own sound rate, told when it changes (a game sets it as it starts: Mario Kart's 65536 after
+	 * the 32768 it boots at), as mGBA's libretro core does (its _audioRateChanged): a frontend playing 65536
+	 * as 32768 takes two seconds over each second's sound — 游典, paced by its sound, ran such games at
+	 * half speed, an octave down. Before this frame's sound is handed over. */
+	unsigned rate = emu_audio_rate(&emu);
+	if (rate && avRate && rate != avRate) {
+		struct retro_system_av_info info;
+		retro_get_system_av_info(&info); /* (avRate is this rate from here) */
+		environ_cb(RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO, &info);
+	}
 	size_t got;
 	while ((got = emu_audio_read(&emu, audioBuf, 4096)) > 0) audio_batch_cb(audioBuf, got);
 }
