@@ -8531,6 +8531,25 @@ static const MapProfile profiles[] = {
 		.logo = { .wait = 2300, .mask = &logoMaskAMW, .rev = 1 /* (cut along the official logo's outline: test builds' first cut made again) */ },
 	},
 	{
+		/* Kirby: Nightmare in Dream Land (游典's, github.com/dukewan/gba-ds youdian: not in GBA DS's list).
+		 * Found with tools/harness (layershot, peek): the HUD (lives, health, score; the level's name at the
+		 * top in the hubs) is BG0 alone; while it shows (the hubs and the stages) BG0 is set up as 0x0200
+		 * and BG1 as 0x0305 — the title has BG0 0x0300, the pause's ability card BG1 0x1D0A. The title's
+		 * 星の卡比 lettering is BG1, its frame BG2. */
+		.codes = { "A7KJ", "A7KE", "A7KP" },
+		.title = "Kirby: Nightmare in Dream Land",
+		.logoOnly = true,
+		.logo = { .steps = { { 0, 420 } }, .layers = 0x06, .maxY = 112 },
+		.hud = {
+			.on = { { 0x04000008, 0xFFFF, 0x0200, 2 }, { 0x0400000A, 0xFFFF, 0x0305, 2 } },
+			.bgMask = 1,
+			/* the bottom row (lives, health, score) to the second screen's top, under where the hubs'
+			 * level name is (rows 0-15); the logo under them */
+			.moves = { { 0, 144, 239, 159, 'C', 120, 'T', 20 } },
+			.logoBelow = true,
+		},
+	},
+	{
 		/* Sonic Advance (USA, Europe and Japan (Rev 1): the same sprites,
 		 * registers and title steps in each). In a level
 		 * (display mode 0 with BG1-3: the zone card, play, the act's

@@ -317,6 +317,24 @@ int main(int argc, char** argv) {
 			for (int i = 0; i < 5; ++i) emu.core->enableVideoLayer(emu.core, i, true);
 			emu_state_load(&emu, st);
 			free(st);
+		} else if (!strcmp(cmd, "savestate")) {
+			/* savestate FILE: mGBA's state-file form (what loadstate, 游典's core and GBA DS read) */
+			struct VFile* vf = VFileMemChunk(NULL, 0);
+			mCoreSaveStateNamed(emu.core, vf, SAVESTATE_SAVEDATA | SAVESTATE_RTC);
+			ssize_t vn = vf->size(vf);
+			void* vb = malloc((size_t) vn);
+			vf->seek(vf, 0, SEEK_SET);
+			vf->read(vf, vb, (size_t) vn);
+			vf->close(vf);
+			FILE* sf = fopen(a1, "wb");
+			if (sf) fwrite(vb, 1, (size_t) vn, sf), fclose(sf);
+			free(vb);
+		} else if (!strcmp(cmd, "loadstate")) {
+			/* loadstate FILE: a state file in mGBA's form (auto's, 游典's, GBA DS's) */
+			struct VFile* vf = VFileOpen(a1, O_RDONLY);
+			bool ok = vf && mCoreLoadStateNamed(emu.core, vf, SAVESTATE_RTC);
+			if (vf) vf->close(vf);
+			fprintf(stderr, "loadstate %s: %s\n", a1, ok ? "ok" : "failed");
 		} else if (!strcmp(cmd, "dumpram")) {
 			/* EWRAM (256K) followed by IWRAM (32K) */
 			char path[512];
