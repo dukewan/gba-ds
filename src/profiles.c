@@ -4239,29 +4239,39 @@ static const char* bk_compose(Emu* s, const void* state, uint32_t* const* out, i
 }
 
 /* ------------------------------ The Legend of Zelda: The Minish Cap (游典's)
- * The pause screen's pages in turn, 5 seconds each: the Map once the story has given it (the first
- * shown), Items, Collection (hearts, sword, figurines). Opened on a hidden copy with START — it opens
- * on the page last looked at — then R from page to page until one comes round again: Items → Collection
- * without the map, Items → Collection → Map with it (the game's PauseMenu: the map pages are left out
- * while ITEM_MAP isn't in the inventory). The pages are told apart by the picture: the Map page is
- * DISPCNT 0x9F40 (the others 0x1D40), the Collection has its 睡眠 button, blue at (150, 121). Where
- * START opens nothing (a conversation, a scene): the quick failure, the last pictures stay.
- * (The Map page had not been counted a pause screen at all: with the map in hand the menu opened on it,
- * nothing was taken, and the second screen stayed the logo — QQ群 Zaly, 2.17.0.) */
-#define MC_MAP(s) (emu_read16((s), 0x04000000) == 0x9F40)
-#define MC_PAUSED(s) (emu_read16((s), 0x04000000) == 0x1D40 || MC_MAP(s))
-static bool mc_settle(Emu* s, int frames) {
-	for (int f = 0; f < frames; ++f) emu_frame(s, 0);
-	return MC_PAUSED(s);
+ * The pause screen's pages in turn, 5 seconds each: its map once the story has given it (the first
+ * shown: the world's, or in a dungeon the dungeon's), Items, Collection, and any other page the menu
+ * has there. Opened on a hidden copy with START — it opens on the page last looked at — then R from
+ * page to page until one comes round again.
+ *
+ * The menu is read from the game's own record of it, not from the picture: gPauseMenuOptions at
+ * 0x02034490 (the same in the Japanese, American and European cartridges' RAM as gSave at 0x02002A40),
+ * its page at +1 (1 Items, 2 Collection, 4 the world map, 5 a dungeon's map; others later in the
+ * story) and what it's doing at +0x11 (2: still, taking buttons; 3 turning a page; 6 closing) — the
+ * names from the game's decompilation, github.com/zeldaret/tmc. Before, a page was known by its
+ * DISPCNT and a pixel: the map pages have another DISPCNT, weren't counted a pause screen, and with the
+ * map in hand the menu opened on one, nothing was taken and the second screen stayed the logo (QQ群
+ * Zaly, 2.17.0). A page this doesn't know is shown all the same, after the ones it does. Where START
+ * opens nothing (a conversation, a scene): the quick failure, the last pictures stay. */
+#define MC_MENU 0x02034490
+#define MC_PAGE(s) emu_read8((s), MC_MENU + 1)
+/* gMain at 0x03001000: its task at +2 (0 the title, 1 the files, 2 the game), the game's state at +3 (2 once
+ * a file is being played) and what the game is at, +4: 2 playing (walking about, a conversation), 7 a
+ * screen over it (the pause screen, an opening scene). */
+#define MC_PLAYING(s) (emu_read8((s), 0x03001002) == 2 && emu_read8((s), 0x03001003) == 2 && emu_read8((s), 0x03001004) == 2)
+#define MC_STILL(s) (emu_read8((s), MC_MENU + 0x11) == 2 && emu_read8((s), 0x03001004) == 7)
+/* still for [need] frames in a row, within [most] */
+static bool mc_settle(Emu* s, int need, int most) {
+	int run = 0;
+	for (int f = 0; f < most && run < need; ++f) {
+		emu_frame(s, 0);
+		run = MC_STILL(s) ? run + 1 : 0;
+	}
+	return run >= need;
 }
-static bool mc_collection(const uint32_t* fb) {
-	uint32_t c = fb[121 * GBA_W + 150];
-	int r = c & 0xFF, g = (c >> 8) & 0xFF, b = (c >> 16) & 0xFF;
-	(void) g;
-	return b > 200 && r < 120;
-}
-/* 0 the Map, 1 Items, 2 the Collection: the order they're shown in */
-static int mc_page(Emu* s) { return MC_MAP(s) ? 0 : mc_collection(s->fb) ? 2 : 1; }
+/* the order they're shown in: a map, Items, the Collection, then whatever else */
+static int mc_rank(int page) { return page == 4 || page == 5 ? 0 : page == 1 ? 1 : page == 2 ? 2 : 3 + page; }
+#define MC_PAGES 5
 static const char* mc_compose(Emu* s, const void* state, uint32_t* const* out, int* nOut, int* step, int w, int h) {
 	int max = *nOut;
 	*nOut = 1;
@@ -4269,36 +4279,35 @@ static const char* mc_compose(Emu* s, const void* state, uint32_t* const* out, i
 	if (w < GBA_W || h < GBA_H) return "picture too small";
 	if (!emu_state_load(s, state)) return "state load failed";
 	emu_frame(s, 0);
-	if (MC_PAUSED(s)) return "screen already looks like the map";
+	if (!MC_PLAYING(s)) return "screen already looks like the map"; /* (the pause screen up, a scene) */
 	aw_run(s, K_START, 4);
-	int f = 0;
-	while (f < 40 && !MC_PAUSED(s)) emu_frame(s, 0), ++f;
-	if (!MC_PAUSED(s)) return "map button did nothing";
-	if (!mc_settle(s, 60)) return "the pause screen didn't settle";
-	if (max > 3) max = 3;
-	int kind[3], n = 0;
+	if (!mc_settle(s, 30, 150)) return "map button did nothing";
+	if (max > MC_PAGES) max = MC_PAGES;
+	int page[MC_PAGES], n = 0;
 	while (n < max) {
-		int k = mc_page(s);
+		int at = MC_PAGE(s);
 		bool seen = false;
-		for (int i = 0; i < n; ++i) seen = seen || kind[i] == k;
+		for (int i = 0; i < n; ++i) seen = seen || page[i] == at;
 		if (seen) break; /* (round again, or the R didn't turn it) */
-		kind[n] = k;
+		page[n] = at;
 		bk_copy(s, out[n], w, h);
 		++n;
 		if (n == max) break;
 		aw_run(s, K_R, 4);
-		aw_run(s, 0, 8);
-		if (!mc_settle(s, 90)) break; /* (the page turn slides for about a second) */
+		/* (the page turn slides for about a second: until the page is another and it's still again) */
+		int f = 0;
+		while (f < 40 && MC_PAGE(s) == at) emu_frame(s, 0), ++f;
+		if (MC_PAGE(s) == at) break;
+		if (!mc_settle(s, 30, 240)) break;
 	}
 	if (!n) return "no page taken";
-	/* in the order they're shown: the Map, Items, the Collection */
 	size_t bytes = (size_t) w * h * sizeof(uint32_t);
 	uint32_t* tmp = malloc(bytes);
 	for (int i = 0; tmp && i < n; ++i)
 		for (int j = i + 1; j < n; ++j)
-			if (kind[j] < kind[i]) {
-				int t = kind[i];
-				kind[i] = kind[j], kind[j] = t;
+			if (mc_rank(page[j]) < mc_rank(page[i])) {
+				int t = page[i];
+				page[i] = page[j], page[j] = t;
 				memcpy(tmp, out[i], bytes), memcpy(out[i], out[j], bytes), memcpy(out[j], tmp, bytes);
 			}
 	free(tmp);
@@ -8601,18 +8610,19 @@ static const MapProfile profiles[] = {
 	{
 		/* The Legend of Zelda: The Minish Cap (游典's, github.com/dukewan/gba-ds youdian: not in GBA DS's
 		 * list). The pause screen's pages are shown in turn (mc_compose): Items and Collection from the
-		 * start, the Map first once the castle has given it. Found with tools/harness: walking
-		 * about, 0x02000083 is 4 and 0x02000086 is 1 (the title 0 / 2, the opening's scenes 14, paused
-		 * 0); the pause screen is DISPCNT 0x1D40 (play 0x1740 / 0x1F40); its tab, the L and R buttons
-		 * and the frame's grey are fixed (the backdrop's leaves move). The title's ZELDA is BG1. */
+		 * start, the map first once the castle has given it. In play is the game's own word for it, gMain
+		 * (0x03001000: task 2 the game, state 2, at 2 playing — 7 with the pause screen or a scene over it);
+		 * back at the title its task is 0. (0x02000083, read at first, is the menus' own scratch: 4 until
+		 * the pause screen was first opened and never again, so the second screen went back to the logo
+		 * for good once the player had paused — QQ群 Zaly, 2.17.0.) The title's ZELDA is BG1. */
 		.codes = { "BZMJ", "BZME", "BZMP" },
 		.title = "The Legend of Zelda: The Minish Cap",
 		.composePages = mc_compose,
 		.stillPick = STILL_FIRST,
 		.crop_w = GBA_W,
 		.crop_h = GBA_H,
-		.live = { { 0x02000083, 0xFF, 0x04, 1 }, { 0x02000086, 0xFF, 0x01, 1 } },
-		.menu = { { 0x02000083, 0xFF, 0x00, 1 } },
+		.live = { { 0x03001002, 0xFF, 0x02, 1 }, { 0x03001003, 0xFF, 0x02, 1 }, { 0x03001004, 0xFF, 0x02, 1 } },
+		.menu = { { 0x03001002, 0xFF, 0x00, 1 } },
 		.logo = { .steps = { { 0, 600 } }, .layer = 1, .maxY = 100 },
 	},
 	{
