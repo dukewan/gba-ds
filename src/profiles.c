@@ -4269,6 +4269,8 @@ static bool mc_settle(Emu* s, int need, int most) {
 	}
 	return run >= need;
 }
+volatile int gbads_mapOnly = 1;
+
 /* the order they're shown in: a map, Items, the Collection, then whatever else */
 static int mc_rank(int page) { return page == 4 || page == 5 ? 0 : page == 1 ? 1 : page == 2 ? 2 : 3 + page; }
 #define MC_PAGES 5
@@ -4311,6 +4313,9 @@ static const char* mc_compose(Emu* s, const void* state, uint32_t* const* out, i
 				memcpy(tmp, out[i], bytes), memcpy(out[i], out[j], bytes), memcpy(out[j], tmp, bytes);
 			}
 	free(tmp);
+	/* 只显示地图: the map alone once there is one, not the pages in turn (QQ群 R33, 谭天说地 and another:
+	 * 「下屏固定地图页」); before the castle gives it, Items and Collection in turn as before */
+	if (gbads_mapOnly && n > 1 && (page[0] == 4 || page[0] == 5)) n = 1;
 	*nOut = n;
 	return NULL;
 }

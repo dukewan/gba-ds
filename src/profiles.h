@@ -864,5 +864,8 @@ bool memprobes_match(const MemProbe* list, int n, Emu* e);
 /* the profile's virt (set when a game's map capture starts): MemProbe
  * addresses from 0xF0000000 */
 extern uint32_t (*memprobe_virtual)(Emu* e, uint32_t addr);
+/* 下屏页面 (the libretro option gbads_pages): 1 a game whose pause screen has several pages (The Minish
+ * Cap) keeps its map on the second screen once it has one, 0 its pages in turn */
+extern volatile int gbads_mapOnly;
 
 #endif

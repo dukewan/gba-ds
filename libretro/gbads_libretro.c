@@ -99,8 +99,20 @@ static void stderr_to_log(void) {
 
 unsigned retro_api_version(void) { return RETRO_API_VERSION; }
 
+/* 下屏页面: a frontend's core option (游典's 内核设置) */
+static void read_options(void) {
+	struct retro_variable var = { "gbads_pages", NULL };
+	if (environ_cb && environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+		gbads_mapOnly = strcmp(var.value, "cycle") != 0;
+}
+
 void retro_set_environment(retro_environment_t cb) {
 	environ_cb = cb;
+	static const struct retro_variable vars[] = {
+		{ "gbads_pages", "Second screen pages (The Minish Cap); map|cycle" },
+		{ NULL, NULL },
+	};
+	cb(RETRO_ENVIRONMENT_SET_VARIABLES, (void*) vars);
 	bool yes = true;
 	cb(RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME, &(bool) { false });
 	(void) yes;
@@ -180,6 +192,7 @@ bool retro_load_game(const struct retro_game_info* game) {
 	if (!game || !game->path) return false;
 	enum retro_pixel_format fmt = RETRO_PIXEL_FORMAT_XRGB8888;
 	if (!environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &fmt)) return false;
+	read_options();
 	snprintf(romPath, sizeof(romPath), "%s", game->path);
 	char dir[4096];
 	state_dir(dir, sizeof(dir));
@@ -287,6 +300,8 @@ static inline uint32_t dim(uint32_t c, int alpha) {
 
 void retro_run(void) {
 	if (!loaded) return;
+	bool changed = false;
+	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &changed) && changed) read_options();
 	attach_save();
 	input_poll_cb();
 	lr_frame(read_keys());
