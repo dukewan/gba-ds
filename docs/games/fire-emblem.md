@@ -34,6 +34,8 @@ Every game also follows the [general rules](README.md#general-rules) (GEN-1 to G
 
 **FE-10. Game screen untouched.** Nothing leaves the game screen: the unit, terrain and goal windows, menus, the battle forecast, conversations, the tutorial's boxes and the phase banners stay where the game draws them, as they would on one screen.
 
+**FE-11. Unit list (游典).** In the Japanese release (the Chinese translations'), with the cursor free on no unit, the second screen is the game's unit list (the map menu's 部队, as the game draws it, on whichever of its pages the player last left it), from its top, six units a picture, turning every 5 seconds; taken again only when a unit changes. A tap on a unit there brings the map's cursor onto it (docs/touch.md, TOUCH-13). Its other releases keep the logo (FE-1) there. (An exception to FE-1 made for 游典's touch screens, the owner, 11-23-2026.)
+
 ## Not covered yet
 
 - Europe (both releases) is checked in the prologue (a unit's status, a phase banner, a story scene) and Japan on a unit's status there; their later chapters, fights and other armies' turns haven't been run.

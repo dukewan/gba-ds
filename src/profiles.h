@@ -834,6 +834,16 @@ int profile_gs_status_pages(void);
 int profile_ft_turn_entry(int x, int y);
 int profile_ft_ui(Emu* e);
 bool profile_ft_turn_ready(Emu* e);
+/* (游典) Fire Emblem's second-screen pages as last composed: what page idx is (FE_PAGE_*) and, on the
+ * unit list's, its six rows' units (their data's addresses; 0 an empty row) from the top. */
+#define FE_LIST_ROWS 6
+enum { FE_PAGE_NONE, FE_PAGE_STATUS, FE_PAGE_LIST };
+int profile_fe_page(int idx, uint32_t units[FE_LIST_ROWS]);
+/* Fire Emblem on the player's phase with its map cursor free and nothing else under way (no menu,
+ * status, event, banner or fight): *cursor the cursor's address (x, y: 16 bits each; then the
+ * cursor's previous place, where it's going and where it's drawn, in pixels), *unitXY where a unit's
+ * x, y bytes are in its data. */
+bool profile_fe_idle(Emu* e, uint32_t* cursor, int* unitXY);
 /* Applies p's romPatch list (all of it, or nothing if any part doesn't
  * match); true if there was one and it went in. */
 bool profile_patch_rom(const MapProfile* p, Emu* e);

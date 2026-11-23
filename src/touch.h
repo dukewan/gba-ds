@@ -16,7 +16,13 @@ bool touch_tap(Emu* e, int page, int x, int y);
 /* After a tap taken: the page it asks to show (Golden Sun's party row), or -1 — then the game was changed
  * and the pages are to be taken again (or the tap did nothing). */
 int touch_page(void);
-/* Keys pressed for the player this frame (a tap's presses on a game's own menus: touch_more.c). */
+/* Keys pressed for the player this frame (a tap's presses on a game's own menus: touch_more.c; Fire
+ * Emblem's cursor brought to a unit tapped: touch_fe.c). */
 uint32_t touch_keys(void);
+
+/* Fire Emblem's (touch_fe.c): the game running is one, a tap, the keys */
+bool touch_fe_game(const Emu* e);
+bool touch_fe_tap(Emu* e, int page, int x, int y);
+uint32_t touch_fe_keys(void);
 
 #endif

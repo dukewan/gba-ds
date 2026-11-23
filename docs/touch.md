@@ -41,6 +41,14 @@ Touches are read only for the games below; any other game's taps stay the fronte
   Zoid's Status is the one already choosing.
 - **TOUCH-12 Rebelstar: Tactical Command.** Pages only: the pages are the soldier already under the field
   cursor (or the Objectives), so there's nothing else to point the cursor at.
+- **TOUCH-13 Fire Emblem** (烈火之剑, 圣魔之光石, 封印之剑: the Japanese releases, which the Chinese
+  translations are): with the cursor free on no unit, the second screen is the game's unit list (the
+  map menu's 部队), six units a page (FE-11). A tap on a unit's row brings the map's cursor onto that
+  unit — step by step, as the D-pad would, the map scrolling with it — and the unit's status follows
+  (FE-3). Only on your phase with the cursor free (no menu, unit selected, conversation or fight): a
+  tap then does nothing but turn the page. Nothing is selected or moved: only the cursor. A press of
+  your own stops it where it is (it gives way to the game). On an empty row, nothing; elsewhere on the
+  page, and on a unit's status, the next page.
 
 ## How
 
@@ -54,4 +62,8 @@ a page asked for shown by lr_second_show).
 the others' (Final Fantasy Tactics Advance: the turn order's rows placed as ft_turn_layout draws them,
 then L, DOWN to the row and B pressed for the player — touch_keys — each step checked on FT_UI: 1
 nothing open, 3 or 4 the list up). Checked in the
+Items page's items read from gPauseMenu.items 0x02000090 as mc_compose takes the page; Fire Emblem:
+src/touch_fe.c — the list's rows' units recorded by fe_compose from the game's own sorted list,
+gSortedUnits, the cursor driven by D-pad presses through touch_keys, one a step once the cursor is
+drawn where it is, while the player phase waits for input). Checked in the
 harness (`tap2 PAGE X,Y`) and on the AYN Thor in 游典 with a player's own save.

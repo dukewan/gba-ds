@@ -52,7 +52,7 @@ bool touch_gs_tap(Emu* e, int page, int x, int y, int* show);
 static int pageAsked = -1;
 
 bool touch_wanted(Emu* e) {
-	return mc(e) || touch_gs_game(e) || touch_more_wanted(e);
+	return mc(e) || touch_gs_game(e) || touch_more_wanted(e) || touch_fe_game(e);
 }
 
 bool touch_tap(Emu* e, int page, int x, int y) {
@@ -60,6 +60,7 @@ bool touch_tap(Emu* e, int page, int x, int y) {
 	if (mc(e)) return mc_tap(e, page, x, y);
 	if (touch_gs_game(e)) return touch_gs_tap(e, page, x, y, &pageAsked);
 	if (touch_more_wanted(e)) return touch_more_tap(e, page, x, y);
+	if (touch_fe_game(e)) return touch_fe_tap(e, page, x, y);
 	return false;
 }
 
@@ -68,5 +69,5 @@ int touch_page(void) {
 }
 
 uint32_t touch_keys(void) {
-	return touch_more_keys();
+	return touch_more_keys() | touch_fe_keys();
 }

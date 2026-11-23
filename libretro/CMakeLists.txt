@@ -20,7 +20,7 @@ file(GLOB WEBP_SRC "${WEBP}/src/dec/*.c" "${WEBP}/src/dsp/*.c" "${WEBP}/src/util
 add_library(gbads_libretro SHARED
 	${ROOT}/libretro/gbads_libretro.c ${ROOT}/libretro/shim.c ${ROOT}/libretro/stubs.c
 	${S}/game.c ${S}/config.c ${S}/i18n.c ${S}/i18n_data.c ${S}/paths.c ${S}/logo.c ${S}/image.c ${S}/cheats.c
-	${S}/emu.c ${S}/patch.c ${S}/mapcap.c ${S}/profiles.c ${S}/poke.c ${S}/poke_data.c ${S}/touch.c ${S}/touch_gs.c ${S}/touch_more.c ${S}/logo_masks.c
+	${S}/emu.c ${S}/patch.c ${S}/mapcap.c ${S}/profiles.c ${S}/poke.c ${S}/poke_data.c ${S}/touch.c ${S}/touch_gs.c ${S}/touch_more.c ${S}/touch_fe.c ${S}/logo_masks.c
 	${WEBP_SRC})
 set_target_properties(gbads_libretro PROPERTIES C_STANDARD 11 C_EXTENSIONS ON PREFIX "")
 target_compile_options(gbads_libretro PRIVATE ${MGBA_DEFINES} -Wall -Wno-unused-parameter -Wno-unused-function -Wno-unused-variable -Wno-missing-field-initializers -fvisibility=default)

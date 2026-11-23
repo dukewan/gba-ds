@@ -26,6 +26,8 @@ The game runs on Fire Emblem's engine, and GBA DS treats it the same way (its ru
 
 **FE8-5. Game screen untouched.** Nothing leaves the game screen: the unit, terrain and goal windows, menus, the battle forecast, conversations, the tutorial's boxes and the phase banners stay where the game draws them. (FE-10.)
 
+**FE8-6. Unit list (游典).** In the Japanese release (the Chinese translations'), with the cursor free on no unit, the second screen is the game's unit list, and a tap on a unit brings the map's cursor onto it. (FE-11; docs/touch.md, TOUCH-13.)
+
 ## Not covered yet
 
 Tried from the owner's four USA states (the title, a unit's status open, the map, a unit moving) and new games played to the prologue's first fight in each release. Later chapters, the world map between chapters, the Tower of Valni and the creature campaign aren't tried yet: the world map in particular is new in this game, and shows the logo (no unit status there).
