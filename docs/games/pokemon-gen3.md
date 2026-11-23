@@ -19,8 +19,12 @@ LeafGreen / Emerald, European ones): no profile.
   its name (Chinese, by species — nicknames aren't read), its level, an HP bar (green over half,
   yellow over a fifth, red below) with HP / max HP, and its condition when it has one (睡眠, 中毒,
   灼伤, 冰冻, 麻痹; 濒死 at 0 HP, the card and icon greyed). An egg: its icon and 蛋, nothing else.
-- **PK-2 The bar along the top.** Four tabs — 队伍, 对战, 箱子, 背包 — a tap on one shows its page
-  (对战 only in a battle); eight badge gems, lit as they're won; the player's money (…元).
+- **PK-0 Twice the size.** The pages are drawn at 480 × 320 (the frame 游典 gets is 480 × 640 for these
+  games, the game at 2×): words in the 12-pixel font at its size or doubled, icons doubled where there's
+  room, edges and bars in GBA pixels. Icons bob in the games' own two frames.
+- **PK-2 The bars.** Along the bottom six tabs — 队伍, 对战, 地图, 图鉴, 箱子, 背包 — a tap on one shows its
+  page (对战 only in a battle); along the top eight badge gems, lit as they're won, the play time, the
+  player's money (…元).
 - **PK-3 Live.** HP, conditions, levels and order follow the game as they change, in battle too
   (the party's HP is the battle's).
 - **PK-4 Before there's a party** (the title, the intro, a new game before the first Pokémon): the
@@ -42,6 +46,17 @@ LeafGreen / Emerald, European ones): no profile.
 - **PK-10 The PC's boxes.** The box the game has open first, ◀ ▶ for the others; its 30 places
   (small icons), how many are filled; a tap on a place shows that Pokémon — icon, name, level (from
   its experience and its species' growth rate in the ROM; none where the ROM has no base stats).
+- **PK-11 A member in full.** A tap on a party card: its nature, ability, held item, HP, its five stats in
+  the games' order, its four moves with type and PP; a tap anywhere goes back. Cards show gender and the
+  held item.
+- **PK-12 The battle's other actions.** Beside the moves, 背包 · 宝可梦 · 逃跑: the game's own action menu's
+  (its cursor put there and A) — lit while the game waits on it. A move against the foe in play is marked
+  效果绝佳 / 效果不好 / 没有效果 (Gen 3's type chart; status moves unmarked).
+- **PK-13 图鉴.** The national Pokédex, 36 a page (◀ ▶): caught ones in colour, seen ones as silhouettes,
+  the others empty; counts of caught and seen; a tap on one names it.
+- **PK-14 地图.** The map the player is on, drawn from the game's own tiles and palettes in the ROM (the
+  layout's blocks, the tilesets' metatiles, two layers), the player a red dot: whole when it fits at half
+  size or more, else at half size round the player.
 - **PK-9 A hack's own Pokémon.** A species the ROM has no national number for (a hack that replaced
   them): ？？？ for its name; one the ROM has no icon for: a Poké Ball.
 
@@ -49,8 +64,7 @@ Names are today's official ones (PokeAPI): a translation's own older ones (利�
 
 ## Not yet
 
-The map (no Chinese place names for Gen 3 anywhere open; the games' own region map pictures not
-located in the ROMs yet). A move tapped in a real double battle (drawn with one made up in memory,
+Place names (no Chinese names for Gen 3's places anywhere open); the region map. A move tapped in a real double battle (drawn with one made up in memory,
 not played).
 
 ## How

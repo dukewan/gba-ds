@@ -64,7 +64,7 @@ types = {int(r['type_id']): r['name'] for r in rows('type_names.csv') if r['loca
 # Psychic Ice Dragon Dark (PokeAPI's ids 1-9, then ???, then 10-17)
 type_names = [types[i] for i in range(1, 10)] + ['？'] + [types[i] for i in range(10, 18)]
 
-UI = '图鉴已捕获已见效果绝佳不好没有宝可梦逃跑No.♂♀⏱◀▶箱子:' '队伍对战背包蛋濒死麻痹睡眠中毒灼伤冰冻元徽章野生训练家道具精灵球树果学习器重要物品还有个空招式' \
+UI = '图鉴已捕获已见效果绝佳不好没有宝可梦逃跑No.♂♀⏱◀▶箱子:地图' '队伍对战背包蛋濒死麻痹睡眠中毒灼伤冰冻元徽章野生训练家道具精灵球树果学习器重要物品还有个空招式' \
      'Lv HP PP/0123456789,?？×+…'
 text = ''.join(nat_names + move_names + item_names + type_names + ability_names + NATURES) + UI + '性格特性攻击防御特攻特防速度经验携带'
 chars = sorted(set(text))

@@ -44,6 +44,8 @@ typedef struct {
 	uint32_t storagePtr, storage; /* the PC's boxes: a pointer (FRLG, E) or where they are (RS) */
 	uint32_t inBattle;            /* gMain's inBattle byte (bit 1), found by a dump in and out of a battle */
 	uint32_t sb2;                 /* save block 2 where it's fixed (RS; FRLG / E: sb2Ptr): the Pokédex, play time */
+	uint32_t mapHeader;           /* gMapHeader: the map the player is on (its layout first) */
+	int primaryTiles, primaryPals; /* the primary tileset's tiles (and metatiles) and palettes: FRLG 640 / 7, else 512 / 6 */
 } Layout;
 
 static const Layout layouts[] = {
@@ -52,25 +54,25 @@ static const Layout layouts[] = {
 	  0x03004FE0, 0x02023FF8, 0x02023FFC,
 	  "\xf0\xb5\x47\x46\x80\xb4\x16\x4f\x16\x4c\x20\x78\x42\x02\xb9\x1c\x51\x18\x0d\x78\xf9\x1c\x52\x18\x11\x78\x09\x02\x0d\x43\x01\x21",
 	  "\x00\xb5\x47\xf7\x41\xf8\x07\x4a\x07\x49\x08\x48\x00\x78\x80\x00\x40\x18\x11\x68\x00\x68\x01\x40\x00\x29\x01\xd1\x01\xf0\x7a\xf8", 0x34C,
-	  0x40000, 0x02023BCC, 0x03005010, 0, 0x03003529, 0 },
+	  0x40000, 0x02023BCC, 0x03005010, 0, 0x03003529, 0, 0x02036DFC, 640, 7 },
 	{ "Emerald", 0x030022C0, 0x020244E9, 0x020244EC, 0x02024744, 0x02024084, 0x03005D8C, 0x03005D90, 0,
 	  0xAC, 0x490, 0x1270, 0x867, { { 0x560, 30 }, { 0x650, 16 }, { 0x790, 46 }, { 0x690, 64 }, { 0x5D8, 30 } },
 	  0x03005D60, 0x020244AC, 0x020244B0,
 	  "\xf0\xb5\x13\x4b\x13\x4c\x20\x78\x42\x02\x99\x1c\x51\x18\x0d\x78\x03\x33\xd2\x18\x11\x78\x09\x02\x0d\x43\x01\x21\x07\x22\x01\x23",
 	  "\xf0\xb5\x47\x46\x80\xb4\x00\x20\x80\x46\x0a\x4b\x18\x78\x40\x02\x09\x49\x46\x18\x09\x4a\x91\x8d\xf0\x20\x08\x40\x1f\x1c\x00\x28", 0x674,
-	  0, 0x0202406C, 0x03005D94, 0, 0x030026F9, 0 },
+	  0, 0x0202406C, 0x03005D94, 0, 0x030026F9, 0, 0x02037318, 512, 6 },
 	{ "Ruby / Sapphire", 0x03001770, 0x03004350, 0x03004360, 0x030045C0, 0x02024A80, 0, 0, 0x02025734,
 	  0, 0x490, 0x1220, 0x807, { { 0x560, 20 }, { 0x600, 16 }, { 0x740, 46 }, { 0x640, 64 }, { 0x5B0, 20 } },
 	  0x03004330, 0x02024E60, 0x02024E64,
 	  "\xf0\xb5\x47\x46\x80\xb4\x17\x4f\x17\x4c\x20\x78\x42\x02\xb9\x1c\x51\x18\x0d\x78\xf9\x1c\x52\x18\x11\x78\x09\x02\x0d\x43\x01\x21",
 	  "\xf0\xb5\x47\x46\x80\xb4\x82\xb0\x00\x20\x80\x46\x12\x4f\x3a\x78\x50\x02\x12\x49\x46\x18\x12\x48\xc1\x8d\x01\x25\x2c\x1c\x0c\x40", 0x5F4,
-	  0, 0x02024A68, 0, 0x020300A0, 0x03001BAD, 0x02024EA4 },
+	  0, 0x02024A68, 0, 0x020300A0, 0x03001BAD, 0x02024EA4, 0x0202E828, 512, 6 },
 	{ "Ruby / Sapphire (Japan)", 0x030016E0, 0x03004280, 0x03004290, 0x030044F0, 0x020247E0, 0, 0, 0x02025494,
 	  0, 0x490, 0x1220, 0x807, { { 0x560, 20 }, { 0x600, 16 }, { 0x740, 46 }, { 0x640, 64 }, { 0x5B0, 20 } },
 	  0x03004260, 0x02024BC0, 0x02024BC4,
 	  "\xf0\xb5\x47\x46\x80\xb4\x16\x4f\x16\x4c\x20\x78\x42\x02\xb9\x1c\x51\x18\x0d\x78\xf9\x1c\x52\x18\x11\x78\x09\x02\x0d\x43\x01\x21",
 	  "\xf0\xb5\x47\x46\x80\xb4\x82\xb0\x00\x20\x80\x46\x12\x4e\x32\x78\x50\x02\x12\x49\x47\x18\x12\x48\xc1\x8d\x01\x25\x2c\x1c\x0c\x40", 0x5DC,
-	  0, 0x020247C8, 0, 0x0202FDC0, 0x03001B19, 0x02024C04 },
+	  0, 0x020247C8, 0, 0x0202FDC0, 0x03001B19, 0x02024C04, 0x0202E588, 512, 6 },
 };
 #define N_LAYOUTS (int) (sizeof(layouts) / sizeof(layouts[0]))
 
@@ -100,6 +102,7 @@ static struct {
 	uint32_t size;
 	uint32_t actionFn, moveFn; /* the battle menus' functions (Thumb: +1), 0: not found */
 	uint32_t baseStats;        /* gBaseStats (28 bytes a species, entry 0: none), 0: not found */
+	const uint8_t* bytes;      /* the ROM itself (the core's copy, while the game is loaded) */
 } rom;
 
 static uint32_t le32(const uint8_t* b) {
@@ -118,6 +121,7 @@ static void rom_scan(Emu* e) {
 	const uint8_t* r = e->core->getMemoryBlock(e->core, 0x8 /* GBA_REGION_ROM0 */, &n);
 	if (!r || n < 0x1000) return;
 	rom.size = (uint32_t) n;
+	rom.bytes = r;
 	int refs[N_LAYOUTS] = { 0 };
 	uint8_t seq[502];
 	for (int i = 0; i < 251; ++i) seq[i * 2] = (uint8_t) (i + 1), seq[i * 2 + 1] = 0;
@@ -664,9 +668,9 @@ static int effect(int a, int d1, int d2) {
 
 /* ------------------------------------------------------------------ pages */
 
-enum { PAGE_PARTY, PAGE_BATTLE, PAGE_DEX, PAGE_BOX, PAGE_BAG, N_PAGES };
-static const char* const pageNames[N_PAGES] = { "队伍", "对战", "图鉴", "箱子", "背包" };
-static const uint32_t pageColors[N_PAGES] = { RGB(216, 72, 64), RGB(232, 136, 40), RGB(64, 160, 96), RGB(40, 144, 168), RGB(80, 104, 200) };
+enum { PAGE_PARTY, PAGE_BATTLE, PAGE_MAP, PAGE_DEX, PAGE_BOX, PAGE_BAG, N_PAGES };
+static const char* const pageNames[N_PAGES] = { "队伍", "对战", "地图", "图鉴", "箱子", "背包" };
+static const uint32_t pageColors[N_PAGES] = { RGB(216, 72, 64), RGB(232, 136, 40), RGB(200, 168, 48), RGB(64, 160, 96), RGB(40, 144, 168), RGB(80, 104, 200) };
 static const char* const pocketNames[5] = { "道具", "精灵球", "树果", "学习器", "重要物品" };
 
 static struct {
@@ -689,7 +693,7 @@ void poke_touch(int x, int y, bool down) {
 
 #define TOP 32      /* the bar along the top's height */
 #define TABS_Y 278  /* the tabs along the bottom */
-#define TAB_W 94
+#define TAB_W 78
 
 static int tab_x(int i) {
 	return 5 + i * TAB_W;
@@ -1019,6 +1023,141 @@ static void page_dex(Emu* e, const Layout* l, uint32_t* key) {
 		int sp = s ? species_of_national(e, nat) : 0;
 		if (sp) icon_draw(e, sp, x + 8, y + 10, 1, o ? animFrame : 0, o ? 0 : 2);
 	}
+}
+
+/* ------------------------------------------------------------------ 地图
+ *
+ * The map the player is on, drawn from the game's own tiles as the game draws it (gMapHeader's layout: its
+ * blocks, each a metatile of the primary or secondary tileset — two layers of 2 × 2 tiles; the tiles,
+ * LZ77-compressed or not, and the palettes from the ROM), the player a red dot. A map that fits at half its
+ * size or more is shown whole; a larger one at half size round the player. */
+
+typedef struct {
+	uint32_t at;        /* the tileset (GBA address); 0: none */
+	uint8_t tiles[1024 * 32];
+	uint32_t pal[16][16];
+	uint32_t metatiles; /* GBA address */
+} TileSet;
+static TileSet tsets[2];
+
+/* the GBA BIOS's LZ77 (type 0x10) from ROM offset o into out (most bytes); false if it isn't one */
+static bool lz77(uint32_t o, uint8_t* out, size_t most) {
+	const uint8_t* r = rom.bytes;
+	if (!r || o + 4 > rom.size || r[o] != 0x10) return false;
+	size_t size = r[o + 1] | r[o + 2] << 8 | r[o + 3] << 16, n = 0;
+	if (size > most) size = most;
+	o += 4;
+	while (n < size && o < rom.size) {
+		uint8_t flags = r[o++];
+		for (int b = 0; b < 8 && n < size && o < rom.size; ++b, flags <<= 1) {
+			if (flags & 0x80) {
+				if (o + 1 >= rom.size) return false;
+				int len = (r[o] >> 4) + 3, disp = ((r[o] & 15) << 8 | r[o + 1]) + 1;
+				o += 2;
+				if ((size_t) disp > n) return false;
+				for (int i = 0; i < len && n < size; ++i, ++n) out[n] = out[n - disp];
+			} else {
+				out[n++] = r[o++];
+			}
+		}
+	}
+	return true;
+}
+
+static TileSet* tileset_load(Emu* e, uint32_t at, int slot) {
+	TileSet* t = &tsets[slot];
+	if (t->at == at) return t;
+	t->at = 0;
+	if (at >> 24 != 0x08 || !rom.bytes) return NULL;
+	bool compressed = emu_read8(e, at);
+	uint32_t tiles = emu_read32(e, at + 4), pals = emu_read32(e, at + 8);
+	t->metatiles = emu_read32(e, at + 12);
+	if (tiles >> 24 != 0x08 || pals >> 24 != 0x08 || t->metatiles >> 24 != 0x08) return NULL;
+	memset(t->tiles, 0, sizeof(t->tiles));
+	if (compressed) {
+		if (!lz77(tiles - 0x08000000, t->tiles, sizeof(t->tiles))) return NULL;
+	} else {
+		uint32_t o = tiles - 0x08000000;
+		size_t n = o + sizeof(t->tiles) <= rom.size ? sizeof(t->tiles) : rom.size - o;
+		memcpy(t->tiles, rom.bytes + o, n);
+	}
+	for (int p = 0; p < 16; ++p)
+		for (int c = 0; c < 16; ++c) t->pal[p][c] = bgr555(emu_read16(e, pals + p * 32 + c * 2));
+	t->at = at;
+	return t;
+}
+
+#define MAP_Y (TOP + 3)
+#define MAP_H 242
+
+static void page_map(Emu* e, const Layout* l, uint32_t* key) {
+	uint32_t layout = emu_read32(e, l->mapHeader);
+	if (layout >> 24 != 0x08) return;
+	int mapW = (int) emu_read32(e, layout), Hb = (int) emu_read32(e, layout + 4);
+	uint32_t blocks = emu_read32(e, layout + 12), p0 = emu_read32(e, layout + 16), p1 = emu_read32(e, layout + 20);
+	if (mapW <= 0 || Hb <= 0 || mapW > 1024 || Hb > 1024 || blocks >> 24 != 0x08) return;
+	uint32_t sb1 = sb1_of(e, l);
+	int pxb = (int16_t) emu_read16(e, sb1), pyb = (int16_t) emu_read16(e, sb1 + 2);
+	*key = (*key ^ layout) * 16777619u;
+	*key = (*key ^ (uint32_t) (pxb << 16 | (pyb & 0xFFFF))) * 16777619u;
+	*key = (*key ^ (uint32_t) animFrame) * 16777619u;
+	if (!px) return;
+	TileSet* t0 = tileset_load(e, p0, 0);
+	TileSet* t1 = tileset_load(e, p1, 1);
+	if (!t0 || !t1) return;
+	int aw = 472, ah = MAP_H, ax = 4, ay = MAP_Y;
+	fill(ax - 2, ay - 2, ax + aw + 1, ay + ah + 1, navy);
+	/* the scale (map pixels to page pixels): whole if at half size or more, else half round the player */
+	int fw = mapW * 16, fh = Hb * 16;
+	double sc = (double) aw / fw < (double) ah / fh ? (double) aw / fw : (double) ah / fh;
+	if (sc > 1.5) sc = 1.5;
+	double vx = 0, vy = 0;
+	int dw = (int) (fw * sc), dh = (int) (fh * sc);
+	if (sc < 0.5) {
+		sc = 0.5;
+		dw = aw, dh = ah;
+		vx = pxb * 16 + 8 - aw / sc / 2, vy = pyb * 16 + 8 - ah / sc / 2;
+		if (vx > fw - aw / sc) vx = fw - aw / sc;
+		if (vy > fh - ah / sc) vy = fh - ah / sc;
+		if (vx < 0) vx = 0;
+		if (vy < 0) vy = 0;
+	}
+	int ox = ax + (aw - dw) / 2, oy = ay + (ah - dh) / 2;
+	fill(ax, ay, ax + aw - 1, ay + ah - 1, RGB(24, 32, 48));
+	int PT = l->primaryTiles, PP = l->primaryPals;
+	for (int y = 0; y < dh; ++y) {
+		int my = (int) (vy + y / sc);
+		if (my >= fh) break;
+		for (int x = 0; x < dw; ++x) {
+			int mx = (int) (vx + x / sc);
+			if (mx >= fw) break;
+			int id = emu_read16(e, blocks + ((my / 16) * mapW + mx / 16) * 2) & 0x3FF;
+			uint32_t meta = id < PT ? t0->metatiles + id * 16 : t1->metatiles + (id - PT) * 16;
+			int sub = ((my % 16) / 8) * 2 + (mx % 16) / 8, tx0 = mx % 8, ty0 = my % 8;
+			uint32_t c = t0->pal[0][0];
+			for (int layer = 0; layer < 2; ++layer) {
+				int en = emu_read16(e, meta + (layer * 4 + sub) * 2);
+				int tile = en & 0x3FF, pal = en >> 12;
+				int tx = en & 0x400 ? 7 - tx0 : tx0, ty = en & 0x800 ? 7 - ty0 : ty0;
+				const uint8_t* td = tile < PT ? t0->tiles + tile * 32 : t1->tiles + (tile - PT) * 32;
+				if (td + 32 > (tile < PT ? t0->tiles : t1->tiles) + sizeof(t0->tiles)) continue;
+				int v = td[ty * 4 + tx / 2];
+				v = tx & 1 ? v >> 4 : v & 15;
+				if (!v) continue; /* (see-through: the layer below, or the backdrop) */
+				c = (pal < PP ? t0 : t1)->pal[pal][v];
+			}
+			px[(oy + y) * HW + ox + x] = c;
+		}
+	}
+	/* the player: a red dot with a white ring, pulsing */
+	int cx = ox + (int) ((pxb * 16 + 8 - vx) * sc), cy = oy + (int) ((pyb * 16 + 8 - vy) * sc);
+	int r = animFrame ? 7 : 6;
+	for (int dy = -r - 2; dy <= r + 2; ++dy)
+		for (int dx = -r - 2; dx <= r + 2; ++dx) {
+			int d = dx * dx + dy * dy;
+			if (d <= r * r) put(cx + dx, cy + dy, RGB(232, 48, 48));
+			else if (d <= (r + 2) * (r + 2)) put(cx + dx, cy + dy, white);
+		}
 }
 
 /* ------------------------------------------------------------------ 箱子 */
@@ -1414,6 +1553,7 @@ const uint32_t* poke_live_view(Emu* e, const char* romPath) {
 	if (ui.page == PAGE_BAG) page_bag(e, l, &key);
 	if (ui.page == PAGE_BOX) page_box(e, l, &key);
 	if (ui.page == PAGE_DEX) page_dex(e, l, &key);
+	if (ui.page == PAGE_MAP) page_map(e, l, &key);
 	if (have && key == lastKey) {
 		hiValid = true;
 		return lo;
@@ -1428,6 +1568,9 @@ const uint32_t* poke_live_view(Emu* e, const char* romPath) {
 		break;
 	case PAGE_DEX:
 		page_dex(e, l, &k2);
+		break;
+	case PAGE_MAP:
+		page_map(e, l, &k2);
 		break;
 	case PAGE_BOX:
 		page_box(e, l, &k2);
