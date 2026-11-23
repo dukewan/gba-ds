@@ -27,7 +27,7 @@ typedef struct {
 
 typedef struct {
 	const char* name;
-	uint32_t gMain; /* in battle: byte +0x439, bit 1 */
+	uint32_t gMain; /* the layout's: the ROM's code refers to it most */
 	uint32_t count, party, enemy, battleMons;
 	uint32_t sb1Ptr, sb2Ptr, sb1; /* the save blocks: pointers (FRLG, E) or where it is (RS) */
 	uint32_t keyOff;              /* in save block 2: the money / quantity key (0: none) */
@@ -39,6 +39,10 @@ typedef struct {
 	uint32_t controller, actionCursor, moveCursor;
 	const char *actionSig, *moveSig;
 	int moveAfterAction; /* the move menu's function this far after the action menu's, its first bytes not found */
+	uint32_t sigFrom;    /* where in the ROM to look for them (FireRed: an unrelated function before starts the same) */
+	uint32_t battlers;   /* gBattlersCount: 4 in a double battle */
+	uint32_t storagePtr, storage; /* the PC's boxes: a pointer (FRLG, E) or where they are (RS) */
+	uint32_t inBattle;            /* gMain's inBattle byte (bit 1), found by a dump in and out of a battle */
 } Layout;
 
 static const Layout layouts[] = {
@@ -46,16 +50,26 @@ static const Layout layouts[] = {
 	  0xF20, 0x290, 0xEE0, 0x820, { { 0x310, 42 }, { 0x430, 13 }, { 0x54C, 43 }, { 0x464, 58 }, { 0x3B8, 30 } },
 	  0x03004FE0, 0x02023FF8, 0x02023FFC,
 	  "\xf0\xb5\x47\x46\x80\xb4\x16\x4f\x16\x4c\x20\x78\x42\x02\xb9\x1c\x51\x18\x0d\x78\xf9\x1c\x52\x18\x11\x78\x09\x02\x0d\x43\x01\x21",
-	  "\x00\xb5\x47\xf7\x41\xf8\x07\x4a\x07\x49\x08\x48\x00\x78\x80\x00\x40\x18\x11\x68\x00\x68\x01\x40\x00\x29\x01\xd1\x01\xf0\x7a\xf8", 0x34C },
+	  "\x00\xb5\x47\xf7\x41\xf8\x07\x4a\x07\x49\x08\x48\x00\x78\x80\x00\x40\x18\x11\x68\x00\x68\x01\x40\x00\x29\x01\xd1\x01\xf0\x7a\xf8", 0x34C,
+	  0x40000, 0x02023BCC, 0x03005010, 0, 0x03003529 },
 	{ "Emerald", 0x030022C0, 0x020244E9, 0x020244EC, 0x02024744, 0x02024084, 0x03005D8C, 0x03005D90, 0,
 	  0xAC, 0x490, 0x1270, 0x867, { { 0x560, 30 }, { 0x650, 16 }, { 0x790, 46 }, { 0x690, 64 }, { 0x5D8, 30 } },
 	  0x03005D60, 0x020244AC, 0x020244B0,
 	  "\xf0\xb5\x13\x4b\x13\x4c\x20\x78\x42\x02\x99\x1c\x51\x18\x0d\x78\x03\x33\xd2\x18\x11\x78\x09\x02\x0d\x43\x01\x21\x07\x22\x01\x23",
-	  "\xf0\xb5\x47\x46\x80\xb4\x00\x20\x80\x46\x0a\x4b\x18\x78\x40\x02\x09\x49\x46\x18\x09\x4a\x91\x8d\xf0\x20\x08\x40\x1f\x1c\x00\x28", 0x674 },
+	  "\xf0\xb5\x47\x46\x80\xb4\x00\x20\x80\x46\x0a\x4b\x18\x78\x40\x02\x09\x49\x46\x18\x09\x4a\x91\x8d\xf0\x20\x08\x40\x1f\x1c\x00\x28", 0x674,
+	  0, 0x0202406C, 0x03005D94, 0, 0x030026F9 },
 	{ "Ruby / Sapphire", 0x03001770, 0x03004350, 0x03004360, 0x030045C0, 0x02024A80, 0, 0, 0x02025734,
-	  0, 0x490, 0x1220, 0x807, { { 0x560, 20 }, { 0x600, 16 }, { 0x740, 46 }, { 0x640, 64 }, { 0x5B0, 20 } } },
+	  0, 0x490, 0x1220, 0x807, { { 0x560, 20 }, { 0x600, 16 }, { 0x740, 46 }, { 0x640, 64 }, { 0x5B0, 20 } },
+	  0x03004330, 0x02024E60, 0x02024E64,
+	  "\xf0\xb5\x47\x46\x80\xb4\x17\x4f\x17\x4c\x20\x78\x42\x02\xb9\x1c\x51\x18\x0d\x78\xf9\x1c\x52\x18\x11\x78\x09\x02\x0d\x43\x01\x21",
+	  "\xf0\xb5\x47\x46\x80\xb4\x82\xb0\x00\x20\x80\x46\x12\x4f\x3a\x78\x50\x02\x12\x49\x46\x18\x12\x48\xc1\x8d\x01\x25\x2c\x1c\x0c\x40", 0x5F4,
+	  0, 0x02024A68, 0, 0x020300A0, 0x03001BAD },
 	{ "Ruby / Sapphire (Japan)", 0x030016E0, 0x03004280, 0x03004290, 0x030044F0, 0x020247E0, 0, 0, 0x02025494,
-	  0, 0x490, 0x1220, 0x807, { { 0x560, 20 }, { 0x600, 16 }, { 0x740, 46 }, { 0x640, 64 }, { 0x5B0, 20 } } },
+	  0, 0x490, 0x1220, 0x807, { { 0x560, 20 }, { 0x600, 16 }, { 0x740, 46 }, { 0x640, 64 }, { 0x5B0, 20 } },
+	  0x03004260, 0x02024BC0, 0x02024BC4,
+	  "\xf0\xb5\x47\x46\x80\xb4\x16\x4f\x16\x4c\x20\x78\x42\x02\xb9\x1c\x51\x18\x0d\x78\xf9\x1c\x52\x18\x11\x78\x09\x02\x0d\x43\x01\x21",
+	  "\xf0\xb5\x47\x46\x80\xb4\x82\xb0\x00\x20\x80\x46\x12\x4e\x32\x78\x50\x02\x12\x49\x47\x18\x12\x48\xc1\x8d\x01\x25\x2c\x1c\x0c\x40", 0x5DC,
+	  0, 0x020247C8, 0, 0x0202FDC0, 0x03001B19 },
 };
 #define N_LAYOUTS (int) (sizeof(layouts) / sizeof(layouts[0]))
 
@@ -84,6 +98,7 @@ static struct {
 	uint32_t national;                             /* species-to-national (entry 0: species 1), 0: not found */
 	uint32_t size;
 	uint32_t actionFn, moveFn; /* the battle menus' functions (Thumb: +1), 0: not found */
+	uint32_t baseStats;        /* gBaseStats (28 bytes a species, entry 0: none), 0: not found */
 } rom;
 
 static uint32_t le32(const uint8_t* b) {
@@ -106,6 +121,8 @@ static void rom_scan(Emu* e) {
 	uint8_t seq[502];
 	for (int i = 0; i < 251; ++i) seq[i * 2] = (uint8_t) (i + 1), seq[i * 2 + 1] = 0;
 	static const uint8_t pound[17] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x00, 0x28, 0x00, 0x64, 0x23 };
+	/* Bulbasaur's base stats and types after an empty entry */
+	static const uint8_t bulbasaur[36] = { [28] = 0x2D, 0x31, 0x31, 0x2D, 0x41, 0x41, 0x0C, 0x03 };
 	for (size_t o = 0; o + 520 <= n; o += 2) {
 		if (!(o & 3)) {
 			uint32_t v = le32(r + o);
@@ -116,6 +133,8 @@ static void rom_scan(Emu* e) {
 				rom.iconPalettes = 0x08000000 + (uint32_t) o;
 			if (!rom.moves && !memcmp(r + o, pound, sizeof(pound)) && r[o + 25] == 50 && r[o + 26] == 1)
 				rom.moves = 0x08000000 + (uint32_t) o;
+			if (!rom.baseStats && r[o + 28] == 0x2D && !memcmp(r + o, bulbasaur, sizeof(bulbasaur)))
+				rom.baseStats = 0x08000000 + (uint32_t) o;
 		}
 		if (!rom.national && r[o] == 1 && r[o + 2] == 2 && !memcmp(r + o, seq, sizeof(seq)))
 			rom.national = 0x08000000 + (uint32_t) o;
@@ -135,14 +154,14 @@ static void rom_scan(Emu* e) {
 		for (int i = 0; i < 440 && rom.icons; ++i)
 			if (ix[i] > 5) rom.icons = false;
 	}
-	/* the battle menus' functions: the action menu's by its first bytes, in the battle code (past the
-	 * first 256 KB, where an unrelated function starts the same in FireRed); the move menu's too, or
-	 * where it lies from the action menu's (LeafGreen) */
+	/* the battle menus' functions: the action menu's by its first bytes (in FireRed past the first
+	 * 256 KB, where an unrelated function starts the same); the move menu's too, or where it lies
+	 * from the action menu's (LeafGreen) */
 	const Layout* L = rom.lay;
 	if (L && L->actionSig) {
-		for (size_t o = 0x40000; o + 32 <= n && !rom.actionFn; o += 2)
+		for (size_t o = L->sigFrom; o + 32 <= n && !rom.actionFn; o += 2)
 			if (!memcmp(r + o, L->actionSig, 32)) rom.actionFn = 0x08000000 + (uint32_t) o + 1;
-		for (size_t o = 0x40000; o + 32 <= n && !rom.moveFn && rom.actionFn; o += 2)
+		for (size_t o = L->sigFrom; o + 32 <= n && !rom.moveFn && rom.actionFn; o += 2)
 			if (!memcmp(r + o, L->moveSig, 32)) rom.moveFn = 0x08000000 + (uint32_t) o + 1;
 		if (rom.actionFn && !rom.moveFn) {
 			uint32_t at = rom.actionFn - 1 + L->moveAfterAction - 0x08000000;
@@ -168,6 +187,37 @@ static int national_of(Emu* e, int species) {
 static const char* species_name(Emu* e, int species) {
 	int nat = national_of(e, species);
 	return nat && pokeNatNames[nat][0] ? pokeNatNames[nat] : "？？？";
+}
+
+/* the experience a level takes at a growth rate (the games' own formulas) */
+static int32_t exp_for(int rate, int n) {
+	int32_t c = n * n * n;
+	switch (rate) {
+	case 1: /* erratic */
+		if (n <= 50) return c * (100 - n) / 50;
+		if (n <= 68) return c * (150 - n) / 100;
+		if (n <= 98) return c * ((1911 - 10 * n) / 3) / 500;
+		return c * (160 - n) / 100;
+	case 2: /* fluctuating */
+		if (n <= 15) return c * ((n + 1) / 3 + 24) / 50;
+		if (n <= 36) return c * (n + 14) / 50;
+		return c * ((n / 2) + 32) / 50;
+	case 3: /* medium slow */
+		return 6 * c / 5 - 15 * n * n + 100 * n - 140;
+	case 4: return 4 * c / 5; /* fast */
+	case 5: return 5 * c / 4; /* slow */
+	default: return c;        /* medium fast */
+	}
+}
+
+/* a boxed Pokémon's level, from its experience (0: unknown — no base stats found) */
+static int level_of(Emu* e, int species, uint32_t exp) {
+	if (!rom.baseStats || species <= 0 || species > 2047 || rom.baseStats + species * 28 + 28 > 0x08000000 + rom.size) return 0;
+	int rate = emu_read8(e, rom.baseStats + species * 28 + 0x13);
+	if (rate > 5) return 0;
+	int lv = 1;
+	while (lv < 100 && (int32_t) exp >= exp_for(rate, lv + 1)) ++lv;
+	return lv;
 }
 
 /* a move's type (0-17, -1: unknown) and base PP (0: unknown) */
@@ -295,7 +345,7 @@ static int badges_of(Emu* e, const Layout* l) {
 static uint32_t* px;
 
 static void put(int x, int y, uint32_t c) {
-	if (x >= 0 && x < W && y >= 0 && y < H) px[y * W + x] = c;
+	if (px && x >= 0 && x < W && y >= 0 && y < H) px[y * W + x] = c;
 }
 
 static void fill(int x0, int y0, int x1, int y1, uint32_t c) {
@@ -489,26 +539,29 @@ static const uint32_t typeColors[18] = {
 
 /* ------------------------------------------------------------------ pages */
 
-enum { PAGE_PARTY, PAGE_BATTLE, PAGE_BAG, N_PAGES };
-static const char* const pageNames[N_PAGES] = { "队伍", "对战", "背包" };
+enum { PAGE_PARTY, PAGE_BATTLE, PAGE_BOX, PAGE_BAG, N_PAGES };
+static const char* const pageNames[N_PAGES] = { "队伍", "对战", "箱子", "背包" };
 static const char* const pocketNames[5] = { "道具", "精灵球", "树果", "学习器", "重要物品" };
 
 static struct {
 	int page, pageBefore; /* before the battle, gone back to after it */
 	bool inBattle;
 	int pocket, bagStart;
+	int box;      /* the box shown (-1: the game's current one) */
+	int boxPick;  /* the place picked in it */
 	/* touches: a tap is taken where the finger went down */
 	bool down, tapped;
 	int tapX, tapY;
-} ui;
+} ui = { .box = -1 };
 
 void poke_touch(int x, int y, bool down) {
 	if (down && !ui.down) ui.tapped = true, ui.tapX = x, ui.tapY = y;
 	ui.down = down;
 }
 
+#define TAB_W 30
 static int tab_x(int i) {
-	return 3 + i * 34;
+	return 2 + i * (TAB_W + 1);
 }
 
 static void header(Emu* e, const Layout* l) {
@@ -517,13 +570,13 @@ static void header(Emu* e, const Layout* l) {
 	for (int i = 0; i < N_PAGES; ++i) {
 		int x = tab_x(i);
 		bool on = ui.page == i, off = i == PAGE_BATTLE && !ui.inBattle;
-		if (on) panel(x, 1, 32, 14, RGB(120, 144, 208), RGB(80, 104, 168));
-		text(x + 4, 2, pageNames[i], off ? RGB(96, 112, 152) : RGB(248, 248, 248), on ? RGB(40, 56, 96) : RGB(24, 32, 56));
+		if (on) panel(x, 1, TAB_W, 14, RGB(120, 144, 208), RGB(80, 104, 168));
+		text(x + 3, 2, pageNames[i], off ? RGB(96, 112, 152) : RGB(248, 248, 248), on ? RGB(40, 56, 96) : RGB(24, 32, 56));
 	}
 	/* the badges: eight gems, lit once won */
 	int badges = badges_of(e, l);
 	for (int i = 0; i < 8; ++i) {
-		int x = 108 + i * 7, y = 5;
+		int x = 128 + i * 6, y = 5;
 		bool won = badges >> i & 1;
 		uint32_t c = won ? RGB(248, 208, 64) : RGB(64, 80, 128), hi = won ? RGB(255, 248, 200) : RGB(88, 104, 152);
 		fill(x + 1, y, x + 3, y + 4, c);
@@ -540,7 +593,7 @@ static void header(Emu* e, const Layout* l) {
 			if ((k - 1 - i) && (k - 1 - i) % 3 == 0) m[n++] = ',';
 		}
 		strcpy(m + n, "元");
-		text(W - 5 - text_width(m), 2, m, RGB(248, 232, 128), RGB(24, 32, 56));
+		text(W - 4 - text_width(m), 2, m, RGB(248, 232, 128), RGB(24, 32, 56));
 	}
 }
 
@@ -568,12 +621,13 @@ static void ground(void) {
 		for (int x = 0; x < W; ++x) px[y * W + x] = (x / 8 + y / 8) % 2 ? RGB(104, 168, 192) : RGB(112, 176, 200);
 }
 
-/* a battler's panel: icon, name, level, HP, condition (x, y: its top left; w wide, 38 high) */
-static void battler_panel(Emu* e, const Battler* b, int x, int y, int w, bool mine) {
-	panel(x, y, w, 38, mine ? RGB(232, 96, 64) : navy, cream);
+/* a battler's panel: icon, name, level, HP, condition (x, y: its top left; w wide, 38 high);
+ * lit: its moves are the ones shown */
+static void battler_panel(Emu* e, const Battler* b, int x, int y, int w, bool lit) {
+	panel(x, y, w, 38, lit ? RGB(232, 96, 64) : navy, cream);
 	fill(x + 2, y + 2, x + w - 3, y + 2, RGB(255, 255, 255));
 	icon_draw(e, b->m.species, x + 2, y + 3, false, !b->m.hp);
-	text_fit(x + 36, y + 3, species_name(e, b->m.species), ink, soft, w - 36 - 34);
+	text_fit(x + 36, y + 3, species_name(e, b->m.species), ink, soft, w - 36 - 30);
 	level(x + w - 5, y + 3, b->m.level);
 	int bx = x + 36, by = y + 17, bw = w - 36 - 12 - 6;
 	hp_bar(bx, by, bw, b->m.hp, b->m.maxHp);
@@ -581,17 +635,28 @@ static void battler_panel(Emu* e, const Battler* b, int x, int y, int w, bool mi
 	status_tag(bx, by + 8, &b->m);
 }
 
-static void page_battle(Emu* e, const Battler* me, const Battler* foe, const Mon* team, int nTeam) {
-	/* the foe, its team beside it in a trainer's battle (wild: one) */
-	bool trainer = nTeam > 1;
-	battler_panel(e, foe, 4, 19, trainer ? 166 : 232, false);
-	if (trainer) {
-		panel(172, 19, 64, 38, navy, RGB(232, 232, 216));
-		for (int i = 0; i < nTeam && i < 6; ++i)
-			icon_draw(e, team[i].species, 175 + (i % 3) * 20, 21 + (i / 3) * 17, true, !team[i].hp);
+/* the battle: bat[0..3] as the game numbers them (0, 2 the player's; 1, 3 the foe's), 2 or 4 of
+ * them; `mine` the player's Pokémon whose moves are shown (0, or 2 when it's that one's turn) */
+static void page_battle(Emu* e, const Battler* bat, int nBat, int mine, const Mon* team, int nTeam) {
+	if (nBat == 4) {
+		/* a double battle: the foe's two, the player's two, side by side */
+		battler_panel(e, &bat[1], 4, 19, 114, false);
+		battler_panel(e, &bat[3], 122, 19, 114, false);
+		battler_panel(e, &bat[0], 4, 59, 114, mine == 0);
+		battler_panel(e, &bat[2], 122, 59, 114, mine == 2);
+	} else {
+		/* the foe, its team beside it in a trainer's battle (wild: one) */
+		bool trainer = nTeam > 1;
+		battler_panel(e, &bat[1], 4, 19, trainer ? 166 : 232, false);
+		if (trainer) {
+			panel(172, 19, 64, 38, navy, RGB(232, 232, 216));
+			for (int i = 0; i < nTeam && i < 6; ++i)
+				icon_draw(e, team[i].species, 175 + (i % 3) * 20, 21 + (i / 3) * 17, true, !team[i].hp);
+		}
+		battler_panel(e, &bat[0], 4, 59, 232, true);
 	}
-	battler_panel(e, me, 4, 59, 232, true);
 	/* the moves, two by two: name, type, PP */
+	const Battler* me = &bat[mine];
 	for (int i = 0; i < 4; ++i) {
 		int x = 4 + (i % 2) * 118, y = 99 + (i / 2) * 30, w = 114;
 		if (!me->moves[i]) {
@@ -621,6 +686,102 @@ static void page_battle(Emu* e, const Battler* me, const Battler* foe, const Mon
 	}
 }
 
+/* ------------------------------------------------------------------ the PC's boxes */
+
+typedef struct {
+	int species; /* 0: an empty place */
+	bool egg;
+	uint32_t exp;
+} Boxed;
+
+/* a boxed Pokémon (the party's first 80 bytes); false: not whole */
+static bool boxed_decode(const uint8_t* b, Boxed* m) {
+	memset(m, 0, sizeof(*m));
+	if (!le32(b) && !le32(b + 4)) return true;
+	uint32_t pid = le32(b), key = pid ^ le32(b + 4);
+	uint8_t d[48];
+	uint16_t sum = 0;
+	for (int i = 0; i < 48; i += 4) {
+		uint32_t v = le32(b + 32 + i) ^ key;
+		d[i] = v, d[i + 1] = v >> 8, d[i + 2] = v >> 16, d[i + 3] = v >> 24;
+		sum += (uint16_t) (v + (v >> 16));
+	}
+	if (sum != le16(b + 28)) return false;
+	const char* o = orders[pid % 24];
+	const uint8_t *g = NULL, *misc = NULL;
+	for (int i = 0; i < 4; ++i) {
+		if (o[i] == 'G') g = d + i * 12;
+		if (o[i] == 'M') misc = d + i * 12;
+	}
+	m->species = le16(g);
+	m->exp = le32(g + 4);
+	m->egg = (le32(misc + 4) >> 30) & 1;
+	return m->species > 0 && m->species <= 2047;
+}
+
+static uint32_t storage_of(Emu* e, const Layout* l) {
+	return l->storagePtr ? emu_read32(e, l->storagePtr) : l->storage;
+}
+
+#define BOX_X 4
+#define BOX_Y 36
+#define CELL 19
+
+static void page_box(Emu* e, const Layout* l, uint32_t* key) {
+	uint32_t st = storage_of(e, l);
+	if (st >> 24 != 0x02) return;
+	int current = emu_read8(e, st);
+	if (ui.box < 0 || ui.box > 13) ui.box = current < 14 ? current : 0;
+	Boxed mons[30];
+	int count = 0;
+	for (int i = 0; i < 30; ++i) {
+		uint8_t raw[80];
+		read_bytes(e, st + 4 + (ui.box * 30 + i) * 80, raw, 80);
+		for (int j = 0; j < 80; j += 4) *key = (*key ^ le32(raw + j)) * 16777619u;
+		if (!boxed_decode(raw, &mons[i])) mons[i].species = -1;
+		if (mons[i].species > 0) ++count;
+	}
+	*key = (*key ^ (uint32_t) (ui.box | ui.boxPick << 8)) * 16777619u;
+	if (!px) return;
+	/* the box's name bar: ◀ 箱子 N ▶, how many */
+	panel(4, 19, 116, 15, navy, RGB(80, 104, 168));
+	char name[24] = "箱子 ";
+	number(name + strlen(name), ui.box + 1);
+	text(62 - text_width(name) / 2, 20, name, RGB(248, 248, 248), RGB(40, 56, 96));
+	for (int d = 0; d < 2; ++d) {
+		/* the arrows: triangles pointing out */
+		int ax = d ? 112 : 8;
+		for (int i = 0; i < 4; ++i) fill(d ? ax + 3 - i : ax + i, 26 - i, d ? ax + 3 - i : ax + i, 26 + i, RGB(248, 248, 248));
+	}
+	char cnt[12];
+	number(cnt, count);
+	strcat(cnt, "/30");
+	/* the grid: 6 by 5 */
+	panel(BOX_X - 2, BOX_Y - 2, 6 * CELL + 4, 5 * CELL + 4, navy, RGB(232, 232, 216));
+	for (int i = 0; i < 30; ++i) {
+		int x = BOX_X + (i % 6) * CELL, y = BOX_Y + (i / 6) * CELL;
+		if (i == ui.boxPick) fill(x, y, x + CELL - 2, y + CELL - 2, RGB(248, 200, 120));
+		if (mons[i].species > 0) icon_draw(e, mons[i].egg ? 412 : mons[i].species, x + 1, y + 1, true, false);
+	}
+	text(BOX_X, BOX_Y + 5 * CELL + 4, cnt, ink, soft);
+	/* the one picked: its icon, name, level */
+	panel(124, 19, 112, 138, navy, cream);
+	const Boxed* m = &mons[ui.boxPick];
+	if (m->species <= 0) {
+		text(180 - text_width("空") / 2, 80, "空", RGB(144, 144, 152), 0);
+		return;
+	}
+	icon_draw(e, m->egg ? 412 : m->species, 164, 30, false, false);
+	const char* nm = m->egg ? "蛋" : species_name(e, m->species);
+	text_fit(180 - text_width(nm) / 2, 68, nm, ink, soft, 104);
+	if (!m->egg) {
+		int lv = level_of(e, m->species, m->exp);
+		if (lv) level(180 + text_width("Lv100") / 2, 84, lv);
+	}
+}
+
+/* ------------------------------------------------------------------ the bag */
+
 static int pocket_x(int i) {
 	static const int xs[5] = { 4, 34, 76, 106, 148 };
 	return xs[i];
@@ -628,12 +789,6 @@ static int pocket_x(int i) {
 
 static void page_bag(Emu* e, const Layout* l, uint32_t* key) {
 	uint32_t sb1 = sb1_of(e, l), k = key_of(e, l) & 0xFFFF;
-	for (int i = 0; i < 5; ++i) {
-		int x = pocket_x(i), w = text_width(pocketNames[i]) + 6;
-		bool on = ui.pocket == i;
-		panel(x, 19, w, 14, on ? RGB(232, 96, 64) : navy, on ? cream : RGB(80, 104, 168));
-		text(x + 3, 20, pocketNames[i], on ? ink : RGB(248, 248, 248), on ? soft : RGB(40, 56, 96));
-	}
 	const Pocket* p = &l->pockets[ui.pocket];
 	int ids[64], qty[64], n = 0;
 	for (int i = 0; i < p->n && i < 64; ++i) {
@@ -642,6 +797,14 @@ static void page_bag(Emu* e, const Layout* l, uint32_t* key) {
 		*key = (*key ^ v) * 16777619u;
 		if (!id) continue;
 		ids[n] = id, qty[n] = q, ++n;
+	}
+	*key = (*key ^ (uint32_t) (ui.pocket | ui.bagStart << 4)) * 16777619u;
+	if (!px) return;
+	for (int i = 0; i < 5; ++i) {
+		int x = pocket_x(i), w = text_width(pocketNames[i]) + 6;
+		bool on = ui.pocket == i;
+		panel(x, 19, w, 14, on ? RGB(232, 96, 64) : navy, on ? cream : RGB(80, 104, 168));
+		text(x + 3, 20, pocketNames[i], on ? ink : RGB(248, 248, 248), on ? soft : RGB(40, 56, 96));
 	}
 	enum { ROWS = 9, PER = ROWS * 2 };
 	if (ui.bagStart >= n) ui.bagStart = 0;
@@ -669,23 +832,37 @@ static void page_bag(Emu* e, const Layout* l, uint32_t* key) {
 	}
 }
 
-/* A move tapped on the battle page: played as the player would — on the action menu FIGHT chosen
- * (its cursor put on it) and A, on the move menu the move's place and A — only while the game is
- * on one of those menus; anything else (a message, an animation) and it waits, given up after
- * three seconds. */
+/* ------------------------------------------------------------------ a move tapped */
+
+/* Played as the player would — on the action menu FIGHT chosen (its cursor put on it) and A, on the
+ * move menu the move's place and A (in a double battle, one more A: the target the game offers) —
+ * only while the game is on one of those menus for that Pokémon; anything else (a message, an
+ * animation) and it waits, given up after three seconds. */
 static struct {
-	int move;   /* -1: none */
-	int frames; /* since the tap */
-	int press;  /* frames left of an A being pressed (then let go) */
-	bool last;  /* the move menu's A: done once let go */
-} act = { -1, 0, 0, false };
+	int move;    /* -1: none */
+	int battler; /* 0 or 2 */
+	int frames;  /* since the tap */
+	int press;   /* frames left of an A being pressed (then let go) */
+	int stage;   /* 0: menus; 1: the move's A pressed; 2: the target's A pressed (doubles) */
+	int wait;    /* frames before the target's A */
+	bool doubles;
+} act = { -1, 0, 0, 0, 0, 0, false };
 static uint32_t injected;
 
 uint32_t poke_keys(void) {
 	return injected;
 }
 
-static void battle_act(Emu* e, const Layout* l, const Battler* me) {
+/* the player's Pokémon (0 or 2) whose turn the menus are for; -1: neither's */
+static int menu_battler(Emu* e, const Layout* l, int nBat) {
+	for (int b = 0; b < nBat; b += 2) {
+		uint32_t f = emu_read32(e, l->controller + b * 4);
+		if (f == rom.actionFn || f == rom.moveFn) return b;
+	}
+	return -1;
+}
+
+static void battle_act(Emu* e, const Layout* l, const Battler* bat) {
 	injected = 0;
 	if (act.move < 0) return;
 	if (++act.frames > 180 || !ui.inBattle || !rom.actionFn || !rom.moveFn) {
@@ -695,36 +872,54 @@ static void battle_act(Emu* e, const Layout* l, const Battler* me) {
 	if (act.press > 0) {
 		/* A down three frames, up three */
 		injected = act.press > 3 ? K_A : 0;
-		if (--act.press == 0 && act.last) act.move = -1;
+		if (--act.press == 0) {
+			if (act.stage == 1 && act.doubles) act.stage = 2, act.wait = 15; /* (the target menu: its A after a moment) */
+			else if (act.stage >= 1) act.move = -1;
+		}
 		return;
 	}
-	uint32_t f = emu_read32(e, l->controller);
-	if (f == rom.actionFn) {
-		emu_write8(e, l->actionCursor, 0);
+	if (act.wait > 0) {
+		if (--act.wait == 0) act.press = 6, injected = K_A;
+		return;
+	}
+	uint32_t f = emu_read32(e, l->controller + act.battler * 4);
+	if (f == rom.actionFn && act.stage == 0) {
+		emu_write8(e, l->actionCursor + act.battler, 0);
 		act.press = 6, injected = K_A;
-	} else if (f == rom.moveFn) {
+	} else if (f == rom.moveFn && act.stage == 0) {
+		const Battler* me = &bat[act.battler];
 		if (!me->moves[act.move] || !me->pp[act.move]) {
 			act.move = -1;
 			return;
 		}
-		emu_write8(e, l->moveCursor, (uint8_t) act.move);
-		act.press = 6, act.last = true, injected = K_A;
+		emu_write8(e, l->moveCursor + act.battler, (uint8_t) act.move);
+		act.press = 6, act.stage = 1, injected = K_A;
 	}
 }
 
-/* a tap: on a page's tab, a pocket (again: its next items), a move */
-static void take_tap(const Battler* me) {
+/* a tap: on a page's tab, a pocket (again: its next items), a move, a box's place or arrow */
+static void take_tap(const Battler* bat, int mine) {
 	if (!ui.tapped) return;
 	ui.tapped = false;
 	int x = ui.tapX, y = ui.tapY;
-	if (ui.page == PAGE_BATTLE && y >= 99 && y < 158 && rom.actionFn && rom.moveFn && act.move < 0) {
-		int i = (y - 99) / 30 * 2 + (x >= 118);
-		if (i < 4 && me->moves[i] && me->pp[i]) act = (typeof(act)) { i, 0, 0, false };
-		return;
-	}
 	if (y < 17) {
 		for (int i = 0; i < N_PAGES; ++i)
-			if (x >= tab_x(i) && x < tab_x(i) + 32 && !(i == PAGE_BATTLE && !ui.inBattle)) ui.page = i;
+			if (x >= tab_x(i) && x < tab_x(i) + TAB_W && !(i == PAGE_BATTLE && !ui.inBattle)) ui.page = i;
+		return;
+	}
+	if (ui.page == PAGE_BATTLE && y >= 99 && y < 158 && rom.actionFn && rom.moveFn && act.move < 0) {
+		int i = (y - 99) / 30 * 2 + (x >= 118);
+		const Battler* me = &bat[mine];
+		if (i < 4 && me->moves[i] && me->pp[i]) act = (typeof(act)) { i, mine, 0, 0, 0, 0, act.doubles };
+		return;
+	}
+	if (ui.page == PAGE_BOX) {
+		if (y >= 19 && y < 34 && x < 120) {
+			ui.box = (ui.box + (x < 62 ? 13 : 1)) % 14;
+			return;
+		}
+		int c = (x - BOX_X) / CELL, r = (y - BOX_Y) / CELL;
+		if (x >= BOX_X && y >= BOX_Y && c < 6 && r < 5) ui.boxPick = r * 6 + c;
 		return;
 	}
 	if (ui.page == PAGE_BAG && y >= 19 && y < 34) {
@@ -756,49 +951,55 @@ const uint32_t* poke_live_view(Emu* e, const char* romPath) {
 	/* a party being written (a switch, a new Pokémon): the last picture meanwhile; none yet: the logo */
 	if (n <= 0) return n < 0 && have ? out : (have = false, NULL);
 	/* in a battle: its page, and back to the page before once it's over */
-	bool inBattle = emu_read8(e, l->gMain + 0x439) & 2;
-	Battler me = { 0 }, foe = { 0 };
+	bool inBattle = emu_read8(e, l->inBattle) & 2;
+	Battler bat[4];
+	memset(bat, 0, sizeof(bat));
+	int nBat = 2, mine = 0;
 	Mon team[6];
 	int nTeam = 0;
 	if (inBattle) {
-		inBattle = battler_read(e, l->battleMons, &me, &key) && battler_read(e, l->battleMons + 0x58, &foe, &key);
+		nBat = emu_read8(e, l->battlers) == 4 ? 4 : 2;
+		for (int b = 0; b < nBat && inBattle; ++b)
+			if (!battler_read(e, l->battleMons + b * 0x58, &bat[b], &key) && b < 2) inBattle = false;
 		nTeam = party_read(e, l->enemy, 6, team, &key);
 		if (nTeam < 0) nTeam = 0;
+		if (rom.actionFn) {
+			int b = menu_battler(e, l, nBat);
+			if (b >= 0) mine = b;
+		}
 	}
+	act.doubles = nBat == 4;
 	if (inBattle != ui.inBattle) {
 		if (inBattle) ui.pageBefore = ui.page, ui.page = PAGE_BATTLE;
 		else if (ui.page == PAGE_BATTLE) ui.page = ui.pageBefore == PAGE_BATTLE ? PAGE_PARTY : ui.pageBefore;
 		ui.inBattle = inBattle;
 	}
-	take_tap(&me);
-	if (inBattle) battle_act(e, l, &me);
+	take_tap(bat, mine);
+	if (inBattle) battle_act(e, l, bat);
 	else injected = 0, act.move = -1;
-	px = out;
 	uint32_t sb1 = sb1_of(e, l);
 	key = (key ^ emu_read32(e, sb1 + l->moneyOff)) * 16777619u;
 	key = (key ^ (uint32_t) badges_of(e, l)) * 16777619u;
-	key = (key ^ (uint32_t) (ui.page | ui.pocket << 4 | ui.bagStart << 8 | ui.inBattle << 20)) * 16777619u;
-	if (ui.page == PAGE_BAG) {
-		/* (the bag's contents in the key too: read as it's drawn, so drawn into a scratch first) */
-		static uint32_t scratch[W * H];
-		px = scratch;
-		uint32_t k2 = key;
-		page_bag(e, l, &k2);
-		px = out;
-		key = k2;
-	}
+	key = (key ^ (uint32_t) (ui.page | ui.inBattle << 4 | mine << 5 | nBat << 8)) * 16777619u;
+	/* (a page's contents in the key too: read without drawing first) */
+	px = NULL;
+	if (ui.page == PAGE_BAG) page_bag(e, l, &key);
+	if (ui.page == PAGE_BOX) page_box(e, l, &key);
 	if (have && key == lastKey) return out;
+	px = out;
 	ground();
 	header(e, l);
+	uint32_t k2 = 0;
 	switch (ui.page) {
 	case PAGE_BATTLE:
-		page_battle(e, &me, &foe, team, nTeam);
+		page_battle(e, bat, nBat, mine, team, nTeam);
 		break;
-	case PAGE_BAG: {
-		uint32_t k2 = 0;
+	case PAGE_BOX:
+		page_box(e, l, &k2);
+		break;
+	case PAGE_BAG:
 		page_bag(e, l, &k2);
 		break;
-	}
 	default:
 		for (int i = 0; i < n; ++i) party_card(e, &mons[i], i);
 	}

@@ -19,8 +19,8 @@ LeafGreen / Emerald, European ones): no profile.
   its name (Chinese, by species — nicknames aren't read), its level, an HP bar (green over half,
   yellow over a fifth, red below) with HP / max HP, and its condition when it has one (睡眠, 中毒,
   灼伤, 冰冻, 麻痹; 濒死 at 0 HP, the card and icon greyed). An egg: its icon and 蛋, nothing else.
-- **PK-2 The bar along the top.** Three tabs — 队伍, 对战, 背包 — a tap on one shows its page (对战
-  only in a battle); eight badge gems, lit as they're won; the player's money (…元).
+- **PK-2 The bar along the top.** Four tabs — 队伍, 对战, 箱子, 背包 — a tap on one shows its page
+  (对战 only in a battle); eight badge gems, lit as they're won; the player's money (…元).
 - **PK-3 Live.** HP, conditions, levels and order follow the game as they change, in battle too
   (the party's HP is the battle's).
 - **PK-4 Before there's a party** (the title, the intro, a new game before the first Pokémon): the
@@ -31,13 +31,17 @@ LeafGreen / Emerald, European ones): no profile.
 - **PK-6 The battle.** When a battle starts, its page comes up (and the page before comes back
   when it ends): the foe in play (icon, name, level, HP, condition), the trainer's whole team beside
   it (small icons, fainted ones greyed; none in a wild battle), the player's Pokémon in play, and its
-  four moves — name, type, PP left of the most.
+  four moves — name, type, PP left of the most. A double battle: the foe's two and the player's two,
+  side by side; the moves are those of the player's Pokémon whose turn it is (its card edged orange).
 - **PK-7 A move tapped.** While the game waits on its action menu (FIGHT chosen for the player) or
   its move menu, a tap on a move plays it, as A on it would. Anywhere else in the battle (a message,
   an animation) the tap waits for the menu, and is dropped after three seconds; a move without PP
-  does nothing. Ruby / Sapphire: not yet (their menus aren't found), the moves only shown.
+  does nothing. In a double battle, after the move the target the game offers is taken (A).
 - **PK-8 The bag.** Pockets along the top (道具, 精灵球, 树果, 学习器, 重要物品), each one's items with
   how many; past 17, 还有…个 — a tap on the list or the pocket shows the next ones.
+- **PK-10 The PC's boxes.** The box the game has open first, ◀ ▶ for the others; its 30 places
+  (small icons), how many are filled; a tap on a place shows that Pokémon — icon, name, level (from
+  its experience and its species' growth rate in the ROM; none where the ROM has no base stats).
 - **PK-9 A hack's own Pokémon.** A species the ROM has no national number for (a hack that replaced
   them): ？？？ for its name; one the ROM has no icon for: a Poké Ball.
 
@@ -45,7 +49,9 @@ Names are today's official ones (PokeAPI): a translation's own older ones (利�
 
 ## Not yet
 
-Ruby / Sapphire's tap-to-play; the PC's boxes; double battles' second Pokémon; the map.
+The map (no Chinese place names for Gen 3 anywhere open; the games' own region map pictures not
+located in the ROMs yet). A move tapped in a real double battle (drawn with one made up in memory,
+not played).
 
 ## How
 
