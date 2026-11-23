@@ -35,6 +35,8 @@ Asked what the game would have put on a second GBA screen: what a player keeps o
 
 **FE6-6. The English translation.** On the FE6 Localization fan translation (v1.2.1, as a patched ROM or with its UPS patch on the Japanese ROM, GEN-9) FE6-1 to FE6-5 hold as they are: the same addresses and screens, the status screen in English. Its logo is the translation's own title (FIRE EMBLEM in English, The Binding Blade on the ribbon, ™ for ®), taken the same way. Known issue: GBA DS keeps one logo per game, made from whichever of the two is started first, so with both the Japanese game and the translation on the card, both show that one's title.
 
+**FE6-7. Unit list (游典).** With the cursor free on no unit, the second screen is the game's unit list, and a tap on a unit brings the map's cursor onto it. (FE-11; docs/touch.md, TOUCH-4.) The cases fe6-jp-no-unit and fe6-jp-cursor-off (the logo on grass) are to be taken again for it.
+
 ## Not covered yet
 
 Tried from the owner's save (GameShark, "17515" on GameFAQs: the end of chapter 22, the final chapter and chapter 23 saved): the end of chapter 22, the preparations and chapter 23's first turns (a unit's status, ours and an enemy's, the cursor on no unit, a unit moving, its menu, fights in both phases, the enemy phase and its banner, a story scene during the battle), in Japanese and, from the same save, in English. Not tried yet: the early chapters, fog of war, the link arena (needs a link cable), the trial maps (Extras), and the older English patch in docs/patches.md (Dark Twilkitri's IPS).

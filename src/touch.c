@@ -45,14 +45,15 @@ static bool mc_tap(Emu* e, int page, int x, int y) {
 /* ---------------------------------------------------------- */
 
 bool touch_wanted(Emu* e) {
-	return mc(e);
+	return mc(e) || touch_fe_game(e);
 }
 
 bool touch_tap(Emu* e, int page, int x, int y) {
 	if (mc(e)) return mc_tap(e, page, x, y);
+	if (touch_fe_game(e)) return touch_fe_tap(e, page, x, y);
 	return false;
 }
 
 uint32_t touch_keys(void) {
-	return 0;
+	return touch_fe_keys();
 }

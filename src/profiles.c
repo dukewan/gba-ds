@@ -1715,6 +1715,13 @@ typedef struct {
 	 * Emblem: Fuuin no Tsurugi's units keep them 2 bytes earlier, and it
 	 * has fewer) */
 	uint8_t unitXY, nUnits;
+	/* (游典) the unit list (the map menu's first item, 部队): the menu's process script and the map
+	 * menu's definition (a menu's +0x30; its item at +0x61), the list's script and where it waits for
+	 * input, the list's units in order (pointers to 12-byte entries, each a unit's data first) and how
+	 * many (0: not found for this release: no list, the logo) */
+	uint32_t menu, mapMenu, list;
+	uint8_t listLoop, listScroll; /* (and its scroll, in pixels: 16 a row) */
+	uint32_t sorted, sortedN;
 } FeRegion;
 #define FE7_AT .atMini = 0x50, .atIdle = 0x70, .atMenu = 0xD0, .atFight = 0xF0, .unitXY = 0x10, .nUnits = 144
 #define FE8_AT .atMini = 0x60, .atIdle = 0x80, .atMenu = 0xE8, .atFight = 0x108, .unitXY = 0x10, .nUnits = 144
@@ -1726,7 +1733,8 @@ static const FeRegion feRegions[] = {
 	{ '7', 'E', 0x0202BBF8, 0x02024E28, 0x0202BBCC, 0x0202BD50, 0x08B93374, 0x08B90D88, 0x08B9A99C, 0x08B937AC, 0x08CC1F5C, 0, FE7_AT },
 	{ '7', 'Y', 0x0202BBF8, 0x02024E28, 0x0202BBCC, 0x0202BD50, 0x08C57730, 0x08C54ECC, 0x08C5ECE8, 0x08C57B8C, 0x08D88F1C, 0x08DC195C, FE7_AT },
 	{ '7', 'X', 0x0202BBF8, 0x02024E28, 0x0202BBCC, 0x0202BD50, 0x08C8EBA0, 0x08C8C33C, 0x08C96158, 0x08C8EFFC, 0x08DC195C, 0, FE7_AT },
-	{ '7', 'J', 0x0202BBF4, 0x02024E20, 0x0202BBC8, 0x0202BD4C, 0x08C02630, 0x08BFFF78, 0x08C09CE8, 0x08C02A68, 0x08D8A520, 0, FE7_AT },
+	{ '7', 'J', 0x0202BBF4, 0x02024E20, 0x0202BBC8, 0x0202BD4C, 0x08C02630, 0x08BFFF78, 0x08C09CE8, 0x08C02A68, 0x08D8A520, 0, FE7_AT,
+	  .menu = 0x08C09BF4, .mapMenu = 0x08C04DB0, .list = 0x08D8B71C, .listLoop = 0x50, .listScroll = 0x3E, .sorted = 0x0200CBF0, .sortedN = 0x0200E668 },
 	/* Fire Emblem: The Sacred Stones (the same engine; its RAM mapped
 	 * from Fire Emblem's by tools/romxref.py, its process scripts found
 	 * running in the owner's states and a new game played through: the
@@ -1737,14 +1745,16 @@ static const FeRegion feRegions[] = {
 	/* (Europe: the USA's RAM; Japan: 4 bytes lower but the process slots.
 	 * Their scripts found by the USA ones' commands) */
 	{ '8', 'P', 0x0202BCF0, 0x02024E68, 0x0202BCC4, 0x0202BE4C, 0x087ABDB8, 0x087A2ADC, 0x087DBBCC, 0x087AC29C, 0x08A8EE00, 0, FE8_AT },
-	{ '8', 'J', 0x0202BCEC, 0x02024E68, 0x0202BCC0, 0x0202BE48, 0x085C2F58, 0x085B98A0, 0x085E3538, 0x085C3400, 0x08A72A90, 0, FE8_AT },
+	{ '8', 'J', 0x0202BCEC, 0x02024E68, 0x0202BCC0, 0x0202BE48, 0x085C2F58, 0x085B98A0, 0x085E3538, 0x085C3400, 0x08A72A90, 0, FE8_AT,
+	  .menu = 0x085E06B0, .mapMenu = 0x085C56F4, .list = 0x08A934EC, .listLoop = 0x60, .listScroll = 0x3E, .sorted = 0x0200D6E0, .sortedN = 0x0200F158 },
 	/* Fire Emblem: Fuuin no Tsurugi (Japan only; AFEJ: 'E', 'J'): its RAM
 	 * mapped from Rekka no Ken's by tools/romxref.py (gPlaySt, the units)
 	 * and the process slots by their free list; its scripts by matching
 	 * the fireemblem6j decompilation's (ProcScr_PlayerPhase, ProcScr_Event,
 	 * ProcScr_EkrBattle, ProcScr_PhaseIntro, ProcScr_StatScreen). The fan
 	 * translation (FE6 Localization) keeps all of them. */
-	{ 'E', 'J', 0x0202AA48, 0x02023CC4, 0x0202AA1C, 0x0202AB78, 0x085C56A8, 0x085C40A4, 0x085CB528, 0x085C5AA0, 0x08677680, 0, FE6_AT },
+	{ 'E', 'J', 0x0202AA48, 0x02023CC4, 0x0202AA1C, 0x0202AB78, 0x085C56A8, 0x085C40A4, 0x085CB528, 0x085C5AA0, 0x08677680, 0, FE6_AT,
+	  .menu = 0x085CB424, .mapMenu = 0x085C7648, .list = 0x08678484, .listLoop = 0x50, .listScroll = 0x40, .sorted = 0x0200CC38, .sortedN = 0x0200CD38 },
 };
 static const FeRegion* fe_r = &feRegions[0];
 static void fe_region(Emu* e) {
@@ -1872,6 +1882,92 @@ static uint32_t fe_virt(Emu* e, uint32_t addr) {
 static uint32_t pageKey;
 static int pageN;
 
+/* (游典, FE-11) With the cursor free on no unit: the unit list (the map menu's 部队), as the game
+ * draws it, six rows a picture, from the top (the list's own cursor brought there), its units
+ * recorded row by row for a tap on it (touch_fe.c). Taken again only when a unit changes. */
+#define FE_LIST_PAGES 8
+static uint32_t listPage[FE_LIST_PAGES][GBA_W * GBA_H];
+static uint32_t listUnits[FE_LIST_PAGES][FE_LIST_ROWS];
+static uint32_t listKey;
+static int listN;
+/* what each picture last composed is (FE_PAGE_*) and, on a list's, its rows' units */
+#define FE_TAP_PAGES 16
+static volatile int fePageKind[FE_TAP_PAGES];
+static volatile uint32_t fePageUnits[FE_TAP_PAGES][FE_LIST_ROWS];
+
+/* The process running `start` (its slot's address), 0 if none is. */
+static uint32_t fe_proc_slot(Emu* e, uint32_t start) {
+	for (int i = 0; i < 64; ++i) {
+		uint32_t a = FE_PROCS + i * 0x6C;
+		if (emu_read32(e, a) == start) return a;
+	}
+	return 0;
+}
+
+/* A unit on the map under the cursor (any army's). */
+static bool fe_unit_at_cursor(Emu* e) {
+	uint32_t cur = emu_read32(e, FE_CURSOR);
+	for (uint32_t a = FE_UNITS; a < FE_UNITS + FE_UNITS_LEN; a += 0x48) {
+		if (emu_read8(e, a + 3) == 8 && emu_read8(e, a + fe_r->unitXY) == (cur & 0xFF) && emu_read8(e, a + fe_r->unitXY + 1) == ((cur >> 16) & 0xFF)) return true;
+	}
+	return false;
+}
+
+/* The list waiting for input (its fade done, no page sliding, no scroll under way). */
+static bool fe_list_still(Emu* s, uint32_t l) {
+	return emu_read32(s, l) == fe_r->list && emu_read32(s, l + 4) == fe_r->list + fe_r->listLoop && !(emu_read16(s, l + fe_r->listScroll) & 15);
+}
+
+/* The unit list opened on this copy (A on the empty place: the map menu, its first item, A), its
+ * pictures into listPage, six rows each: how many. Any step not as expected: none. */
+static int fe_list(Emu* s, int max) {
+	if (!fe_r->list) return 0;
+	aw_run(s, 0, 12); /* (A isn't taken while the cursor glides) */
+	aw_tap(s, K_A, 1);
+	uint32_t m = 0;
+	for (int f = 0; f < 30 && !m; ++f) {
+		m = fe_proc_slot(s, fe_r->menu);
+		if (!m) aw_run(s, 0, 1);
+	}
+	/* the map menu, on its first item (部队) */
+	if (!m || emu_read32(s, m + 0x30) != fe_r->mapMenu) return 0;
+	aw_run(s, 0, 8);
+	if (emu_read8(s, m + 0x61) != 0 || emu_read32(s, m) != fe_r->menu) return 0;
+	aw_tap(s, K_A, 1);
+	uint32_t l = 0;
+	for (int f = 0; f < 150 && !(l && fe_list_still(s, l)); ++f) {
+		l = fe_proc_slot(s, fe_r->list);
+		aw_run(s, 0, 1);
+	}
+	if (!l || !fe_list_still(s, l)) return 0;
+	int n = emu_read8(s, fe_r->sortedN);
+	if (n <= 0 || n > 64) return 0;
+	/* its cursor to the top (it opens on the unit last looked at) */
+	for (int i = 0; i < 80 && (emu_read8(s, l + 0x30) || emu_read16(s, l + fe_r->listScroll)); ++i) aw_tap(s, K_UP, 1);
+	aw_run(s, 0, 4);
+	if (emu_read16(s, l + fe_r->listScroll) || !fe_list_still(s, l)) return 0;
+	int pages = 0, last = -1;
+	while (pages < max && pages < FE_LIST_PAGES) {
+		int first = pages * FE_LIST_ROWS;
+		if (first > n - FE_LIST_ROWS) first = n - FE_LIST_ROWS;
+		if (first < 0) first = 0;
+		if (first <= last) break;
+		/* (the list scrolls a row at a time once its cursor is past the fourth row) */
+		for (int i = 0; i < 80 && emu_read16(s, l + fe_r->listScroll) / 16 < first; ++i) aw_tap(s, K_DOWN, 1);
+		aw_run(s, 0, 6);
+		if (!fe_list_still(s, l) || emu_read16(s, l + fe_r->listScroll) != first * 16) break;
+		memcpy(listPage[pages], s->fb, sizeof(listPage[pages]));
+		for (int r = 0; r < FE_LIST_ROWS; ++r) {
+			int i = first + r;
+			uint32_t ent = i < n ? emu_read32(s, fe_r->sorted + 4 * i) : 0;
+			listUnits[pages][r] = ent ? emu_read32(s, ent) : 0;
+		}
+		last = first;
+		++pages;
+	}
+	return pages;
+}
+
 static const char* fe_compose(Emu* s, const void* state, uint32_t* const* out, int* nOut, int* step, int w, int h) {
 	static uint32_t page[FE_PAGES][GBA_W * GBA_H], fresh[FE_PAGES][GBA_W * GBA_H];
 	static int lastChapter = -1;
@@ -1879,21 +1975,32 @@ static const char* fe_compose(Emu* s, const void* state, uint32_t* const* out, i
 	fe_region(s);
 	*nOut = 1;
 	*step = 300; /* 5 seconds a page */
-	int pages = 0;
+	int pages = 0, kind = FE_PAGE_NONE;
+	const uint32_t* src[FE_LIST_PAGES > FE_PAGES ? FE_LIST_PAGES : FE_PAGES] = { 0 };
 	if (!emu_state_load(s, state)) return "state load failed";
 	emu_frame(s, 0);
 	int chapter = emu_read8(s, FE_CHAPTER_NO);
 	/* a unit selected (or its menu): no status (its commands take the place) */
 	bool cursorFree = fe_proc(s, FE_P_PHASE) == FE_IDLE;
-	if (chapter != lastChapter) lastChapter = chapter, pageKey = 0, pageN = 0;
-	if (cursorFree) {
+	if (chapter != lastChapter) lastChapter = chapter, pageKey = 0, pageN = 0, listKey = 0, listN = 0;
+	/* the units' data and the chapter (the list's key; the status's adds the cursor) */
+	uint32_t units = 2166136261u;
+	for (uint32_t a = FE_UNITS; a < FE_UNITS + FE_UNITS_LEN; a += 4) units = (units ^ emu_read32(s, a)) * 16777619u;
+	units = (units ^ (uint32_t) chapter) * 16777619u;
+	if (cursorFree && fe_r->list && !fe_unit_at_cursor(s)) {
+		/* (游典, FE-11) no unit under the cursor: the unit list */
+		if (units != listKey) {
+			listN = fe_list(s, max);
+			if (emu_cancelled(s)) return "called off";
+			listKey = listN ? units : 0;
+		}
+		pages = listN, kind = FE_PAGE_LIST;
+		for (int k = 0; k < pages; ++k) src[k] = listPage[k];
+	} else if (cursorFree) {
 		/* the status of the unit under the cursor, if there's one: taken
 		 * again only when the cursor or a unit changes (so it doesn't move
 		 * between pictures: a blink, a step) */
-		uint32_t key = 2166136261u;
-		for (uint32_t a = FE_UNITS; a < FE_UNITS + FE_UNITS_LEN; a += 4) key = (key ^ emu_read32(s, a)) * 16777619u;
-		key = (key ^ emu_read32(s, FE_CURSOR)) * 16777619u;
-		key = (key ^ (uint32_t) chapter) * 16777619u;
+		uint32_t key = (units ^ emu_read32(s, FE_CURSOR)) * 16777619u;
 		if (key == pageKey) {
 			pages = pageN;
 		} else {
@@ -1916,25 +2023,42 @@ static const char* fe_compose(Emu* s, const void* state, uint32_t* const* out, i
 			 * status, or there's no unit under the cursor: a status that
 			 * didn't open for a moment (the cursor still moving) is tried
 			 * again at the next picture */
-			bool unit = false;
-			uint32_t cur = emu_read32(s, FE_CURSOR);
-			for (uint32_t a = FE_UNITS; a < FE_UNITS + FE_UNITS_LEN && !unit; a += 0x48) {
-				unit = emu_read8(s, a + 3) == 8 && emu_read8(s, a + fe_r->unitXY) == (cur & 0xFF) && emu_read8(s, a + fe_r->unitXY + 1) == ((cur >> 16) & 0xFF);
-			}
+			bool unit = fe_unit_at_cursor(s);
 			if (emu_cancelled(s)) return "called off";
 			memcpy(page, fresh, sizeof(page[0]) * (size_t) pages);
 			pageKey = pages || !unit ? key : 0, pageN = pages;
 		}
+		kind = FE_PAGE_STATUS;
+		for (int k = 0; k < pages; ++k) src[k] = page[k];
 	}
 	*nOut = pages ? pages : 1;
 	for (int k = 0; k < *nOut; ++k) {
 		uint32_t* o = out[k];
 		for (int i = 0; i < w * h; ++i) o[i] = MAP_BG_NAVY; /* (the logo goes there) */
 		for (int y = 0; pages && y < GBA_H && y < h; ++y) {
-			for (int x = 0; x < GBA_W && x < w; ++x) o[y * w + x] = page[k][y * GBA_W + x] | 0xFF000000;
+			for (int x = 0; x < GBA_W && x < w; ++x) o[y * w + x] = src[k][y * GBA_W + x] | 0xFF000000;
 		}
 	}
+	/* (游典) what each picture is, for a tap on it (touch_fe.c) */
+	for (int k = 0; k < FE_TAP_PAGES; ++k) {
+		fePageKind[k] = k < pages ? kind : FE_PAGE_NONE;
+		for (int r = 0; r < FE_LIST_ROWS; ++r) fePageUnits[k][r] = k < pages && kind == FE_PAGE_LIST ? listUnits[k][r] : 0;
+	}
 	return NULL;
+}
+
+int profile_fe_page(int idx, uint32_t units[FE_LIST_ROWS]) {
+	if (idx < 0 || idx >= FE_TAP_PAGES) return FE_PAGE_NONE;
+	for (int r = 0; r < FE_LIST_ROWS; ++r) units[r] = fePageUnits[idx][r];
+	return fePageKind[idx];
+}
+
+bool profile_fe_idle(Emu* e, uint32_t* cursor, int* unitXY) {
+	fe_region(e);
+	*cursor = FE_CURSOR, *unitXY = fe_r->unitXY;
+	if (!emu_read32(e, FE_CHAPTER) || emu_read8(e, FE_TURN) != 0) return false;
+	if (fe_proc(e, FE_P_PHASE) != FE_IDLE || fe_proc(e, FE_P_EVENT) || fe_proc(e, FE_P_BANNER) || fe_proc(e, FE_P_BATTLE)) return false;
+	return !fe_proc(e, FE_P_STATUS) && !(fe_r->status2 && fe_proc(e, fe_r->status2)) && !(fe_r->menu && fe_proc_slot(e, fe_r->menu));
 }
 
 /* ---------------------------------------------------------- Sword of Mana
