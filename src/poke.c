@@ -1028,6 +1028,7 @@ typedef struct {
 	bool egg;
 	uint32_t exp, pid;
 	int item;
+	int moves[4], abilityNum;
 } Boxed;
 
 /* a boxed Pokémon (the party's first 80 bytes); false: not whole */
@@ -1044,16 +1045,19 @@ static bool boxed_decode(const uint8_t* b, Boxed* m) {
 	}
 	if (sum != le16(b + 28)) return false;
 	const char* o = orders[pid % 24];
-	const uint8_t *g = NULL, *misc = NULL;
+	const uint8_t *g = NULL, *misc = NULL, *at = NULL;
 	for (int i = 0; i < 4; ++i) {
 		if (o[i] == 'G') g = d + i * 12;
 		if (o[i] == 'M') misc = d + i * 12;
+		if (o[i] == 'A') at = d + i * 12;
 	}
 	m->species = le16(g);
 	m->item = le16(g + 2);
 	m->exp = le32(g + 4);
 	m->pid = pid;
 	m->egg = (le32(misc + 4) >> 30) & 1;
+	m->abilityNum = (le32(misc + 4) >> 31) & 1;
+	for (int i = 0; i < 4; ++i) m->moves[i] = le16(at + i * 2);
 	return m->species > 0 && m->species <= 2047;
 }
 
@@ -1109,21 +1113,40 @@ static void page_box(Emu* e, const Layout* l, uint32_t* key) {
 		text_mid(382, TOP + 110, "空", RGB(144, 144, 152), 0, 2);
 		return;
 	}
-	icon_draw(e, m->egg ? 412 : m->species, 350, TOP + 20, 2, animFrame, 0);
+	icon_draw(e, m->egg ? 412 : m->species, 296, TOP + 8, 2, animFrame, 0);
 	if (m->egg) {
-		text_mid(382, TOP + 100, "蛋", ink, soft, 2);
+		text(364, TOP + 26, "蛋", ink, soft, 2);
 		return;
 	}
-	const char* nm = species_name(e, m->species);
-	int w = text_width(nm, 2) + 26;
-	name_and_gender(e, 382 - w / 2, TOP + 96, nm, m->species, m->pid, 180);
+	name_and_gender(e, 364, TOP + 10, species_name(e, m->species), m->species, m->pid, 108);
 	int lv = level_of(e, m->species, m->exp);
 	if (lv) {
 		char s[8] = "Lv";
 		number(s + 2, lv);
-		text_mid(382, TOP + 128, s, ink, soft, 2);
+		text(364, TOP + 40, s, ink, soft, 2);
 	}
-	if (m->item > 0 && m->item < POKE_ITEMS && pokeItemNames[m->item][0]) text_mid(382, TOP + 164, pokeItemNames[m->item], RGB(112, 104, 96), 0, 1);
+	/* nature, ability, item; its moves */
+	int y = TOP + 80;
+	text(298, y, "性格", RGB(120, 112, 104), 0, 1);
+	text(336, y, pokeNatureNames[m->pid % 25], ink, 0, 1);
+	y += 18;
+	text(298, y, "特性", RGB(120, 112, 104), 0, 1);
+	if (rom.baseStats && m->species < 2048) {
+		int ab = emu_read8(e, rom.baseStats + m->species * 28 + 0x16 + m->abilityNum);
+		if (!ab) ab = emu_read8(e, rom.baseStats + m->species * 28 + 0x16);
+		if (ab > 0 && ab < 78) text_fit(336, y, pokeAbilityNames[ab], ink, 0, 1, 132);
+	}
+	y += 18;
+	text(298, y, "携带", RGB(120, 112, 104), 0, 1);
+	if (m->item > 0 && m->item < POKE_ITEMS && pokeItemNames[m->item][0]) text_fit(336, y, pokeItemNames[m->item], ink, 0, 1, 132);
+	y += 24;
+	for (int i = 0; i < 4 && m->moves[i]; ++i) {
+		int t = move_type(e, m->moves[i]);
+		uint32_t tc = t >= 0 ? typeColors[t] : RGB(128, 128, 136);
+		panel(294, y + i * 26, 176, 24, mix(tc, RGB(0, 0, 0), 30), mix(tc, RGB(255, 255, 255), 78));
+		const char* name = m->moves[i] < POKE_MOVES && pokeMoveNames[m->moves[i]][0] ? pokeMoveNames[m->moves[i]] : "？？？";
+		text_fit(302, y + i * 26 + 6, name, ink, 0, 1, 160);
+	}
 }
 
 /* ------------------------------------------------------------------ 背包 */
