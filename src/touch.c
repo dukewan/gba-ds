@@ -2,6 +2,7 @@
 #include "touch.h"
 
 #include "profiles.h"
+#include "touch_more.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -45,14 +46,15 @@ static bool mc_tap(Emu* e, int page, int x, int y) {
 /* ---------------------------------------------------------- */
 
 bool touch_wanted(Emu* e) {
-	return mc(e);
+	return mc(e) || touch_more_wanted(e);
 }
 
 bool touch_tap(Emu* e, int page, int x, int y) {
 	if (mc(e)) return mc_tap(e, page, x, y);
+	if (touch_more_wanted(e)) return touch_more_tap(e, page, x, y);
 	return false;
 }
 
 uint32_t touch_keys(void) {
-	return 0;
+	return touch_more_keys();
 }

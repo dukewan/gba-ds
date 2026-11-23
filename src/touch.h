@@ -13,7 +13,7 @@ bool touch_wanted(Emu* e);
 /* A tap at (x, y) on the second screen (its pixels) while page `page` of its pictures shows: true if
  * the game took it (else the page turns, if there are pages). */
 bool touch_tap(Emu* e, int page, int x, int y);
-/* Keys pressed for the player this frame (none yet: taps act on the game's memory). */
+/* Keys pressed for the player this frame (a tap's presses on a game's own menus: touch_more.c). */
 uint32_t touch_keys(void);
 
 #endif

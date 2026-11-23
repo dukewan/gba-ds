@@ -825,6 +825,12 @@ const MapProfile* profile_find(const char* gameCode);
  * and the Items page's items in its 16 places as last taken (false: not taken yet). */
 int profile_mc_page_kind(int idx);
 bool profile_mc_items(uint8_t items[16]);
+/* (游典) Final Fantasy Tactics Advance's turn order page: the list row (from 0) at (x, y) on it, -1 between
+ * rows, -2 if the page shown isn't the turn order; the map's UI state (1 nothing open, 3 the list); whether
+ * it's the player's turn with nothing open on the battle map, in the turn the page's list was taken in. */
+int profile_ft_turn_entry(int x, int y);
+int profile_ft_ui(Emu* e);
+bool profile_ft_turn_ready(Emu* e);
 /* Applies p's romPatch list (all of it, or nothing if any part doesn't
  * match); true if there was one and it went in. */
 bool profile_patch_rom(const MapProfile* p, Emu* e);
