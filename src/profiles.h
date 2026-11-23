@@ -825,6 +825,9 @@ const MapProfile* profile_find(const char* gameCode);
  * and the Items page's items in its 16 places as last taken (false: not taken yet). */
 int profile_mc_page_kind(int idx);
 bool profile_mc_items(uint8_t items[16]);
+/* (游典) Golden Sun 1 / 2's second screen: how many Status pages (a party member each, the game's order)
+ * the last walking-about pictures have; 0 when the pictures are a battle's or none were taken. */
+int profile_gs_status_pages(void);
 /* Applies p's romPatch list (all of it, or nothing if any part doesn't
  * match); true if there was one and it went in. */
 bool profile_patch_rom(const MapProfile* p, Emu* e);

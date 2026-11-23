@@ -29,6 +29,7 @@ bool lr_second_paged(void);
 void lr_second_tap(void);
 int lr_second_page(void); /* the page shown now (-1: none) */
 void lr_second_refresh(void);
+void lr_second_show(int page); /* (游典) that page, held as a tap holds one */
 #include "../src/profiles.h"
 
 #include <dlfcn.h>
@@ -324,8 +325,10 @@ void retro_run(void) {
 		down = down && fy >= 0;
 		if (pokemon) poke_touch(fx, fy, down);
 		else if (down && !wasDown) {
-			if (touch_tap(&emu, lr_second_page(), fx, fy)) lr_second_refresh();
-			else lr_second_tap();
+			if (touch_tap(&emu, lr_second_page(), fx, fy)) {
+				if (touch_page() >= 0) lr_second_show(touch_page());
+				else lr_second_refresh();
+			} else lr_second_tap();
 		}
 		wasDown = down;
 	}

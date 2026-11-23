@@ -44,13 +44,25 @@ static bool mc_tap(Emu* e, int page, int x, int y) {
 
 /* ---------------------------------------------------------- */
 
+/* Golden Sun 1 and 2: touch_gs.c */
+bool touch_gs_game(const Emu* e);
+bool touch_gs_tap(Emu* e, int page, int x, int y, int* show);
+
+static int pageAsked = -1;
+
 bool touch_wanted(Emu* e) {
-	return mc(e);
+	return mc(e) || touch_gs_game(e);
 }
 
 bool touch_tap(Emu* e, int page, int x, int y) {
+	pageAsked = -1;
 	if (mc(e)) return mc_tap(e, page, x, y);
+	if (touch_gs_game(e)) return touch_gs_tap(e, page, x, y, &pageAsked);
 	return false;
+}
+
+int touch_page(void) {
+	return pageAsked;
 }
 
 uint32_t touch_keys(void) {
