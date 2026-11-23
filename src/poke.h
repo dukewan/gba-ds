@@ -32,6 +32,8 @@ extern const uint16_t pokeNational[POKE_SPECIES];
 extern const char* const pokeMoveNames[POKE_MOVES];
 extern const char* const pokeItemNames[POKE_ITEMS];
 extern const char* const pokeTypeNames[18];
+extern const char* const pokeAbilityNames[78];
+extern const char* const pokeNatureNames[25];
 extern const int pokeGlyphCount;
 extern const PokeGlyph pokeGlyphs[];
 

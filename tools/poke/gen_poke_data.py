@@ -53,6 +53,12 @@ for i in range(N_ITEMS):
     elif i in gen3 and gen3[i] in items_zh: item_names.append(items_zh[gen3[i]])
     else: item_names.append('')
 
+abilities = {int(r['ability_id']): r['name'] for r in rows('ability_names.csv') if r['local_language_id'] == '12'}
+ability_names = [''] + [abilities.get(i, '') for i in range(1, 78)]
+# natures, Gen 3's order (personality % 25)
+NATURES = ['勤奋', '怕寂寞', '勇敢', '固执', '顽皮', '大胆', '坦率', '悠闲', '淘气', '乐天', '胆小', '急躁', '认真', '爽朗',
+           '天真', '内敛', '慢吞吞', '冷静', '害羞', '马虎', '温和', '温顺', '自大', '慎重', '浮躁']
+
 types = {int(r['type_id']): r['name'] for r in rows('type_names.csv') if r['local_language_id'] == '12'}
 # Gen 3's order: Normal Fighting Flying Poison Ground Rock Bug Ghost Steel ??? Fire Water Grass Electric
 # Psychic Ice Dragon Dark (PokeAPI's ids 1-9, then ???, then 10-17)
@@ -60,7 +66,7 @@ type_names = [types[i] for i in range(1, 10)] + ['？'] + [types[i] for i in ran
 
 UI = '图鉴已捕获已见效果绝佳不好没有宝可梦逃跑No.♂♀⏱◀▶箱子:' '队伍对战背包蛋濒死麻痹睡眠中毒灼伤冰冻元徽章野生训练家道具精灵球树果学习器重要物品还有个空招式' \
      'Lv HP PP/0123456789,?？×+…'
-text = ''.join(nat_names + move_names + item_names + type_names) + UI
+text = ''.join(nat_names + move_names + item_names + type_names + ability_names + NATURES) + UI + '性格特性攻击防御特攻特防速度经验携带'
 chars = sorted(set(text))
 
 font = ImageFont.truetype(font_ttf, 12)
@@ -103,6 +109,8 @@ with open(out_c, 'w') as f:
     table(f, 'char* const', 'pokeMoveNames', 'POKE_MOVES', [cstr(n) for n in move_names], 'moves by number')
     table(f, 'char* const', 'pokeItemNames', 'POKE_ITEMS', [cstr(n) for n in item_names], 'items by their Gen 3 index')
     table(f, 'char* const', 'pokeTypeNames', '18', [cstr(n) for n in type_names], 'types, Gen 3 order')
+    table(f, 'char* const', 'pokeAbilityNames', '78', [cstr(n) for n in ability_names], 'abilities by number (Gen 3: 1-77)')
+    table(f, 'char* const', 'pokeNatureNames', '25', [cstr(n) for n in NATURES], 'natures, personality % 25')
     f.write('const int pokeGlyphCount = %d;\n' % len(glyphs))
     f.write('/* sorted by code point */\n')
     f.write('const PokeGlyph pokeGlyphs[] = {\n')

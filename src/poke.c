@@ -239,8 +239,12 @@ typedef struct {
 	bool egg;
 	int level, hp, maxHp;
 	uint32_t status;
-	uint32_t pid; /* personality: the gender, the icon's look */
+	uint32_t pid; /* personality: the gender, the nature */
 	int item;     /* held */
+	int moves[4], pp[4], ppBonuses;
+	int stats[6]; /* max HP, attack, defence, speed, sp. attack, sp. defence */
+	int abilityNum;
+	uint32_t exp;
 } Mon;
 
 static const char orders[24][5] = {
@@ -267,13 +271,19 @@ static bool mon_decode(const uint8_t* b, Mon* m) {
 	}
 	if (sum != le16(b + 28)) return false;
 	const char* o = orders[pid % 24];
-	const uint8_t *g = NULL, *misc = NULL;
+	const uint8_t *g = NULL, *misc = NULL, *at = NULL;
 	for (int i = 0; i < 4; ++i) {
 		if (o[i] == 'G') g = d + i * 12;
 		if (o[i] == 'M') misc = d + i * 12;
+		if (o[i] == 'A') at = d + i * 12;
 	}
 	m->species = le16(g);
 	m->item = le16(g + 2);
+	m->exp = le32(g + 4);
+	m->ppBonuses = g[8];
+	for (int i = 0; i < 4; ++i) m->moves[i] = le16(at + i * 2), m->pp[i] = at[8 + i];
+	m->abilityNum = (le32(misc + 4) >> 31) & 1;
+	for (int i = 0; i < 6; ++i) m->stats[i] = le16(b + 88 + i * 2);
 	m->pid = pid;
 	m->egg = (le32(misc + 4) >> 30) & 1;
 	m->status = le32(b + 80);
@@ -666,10 +676,11 @@ static struct {
 	int box;     /* the box shown (-1: the game's current one) */
 	int boxPick; /* the place picked in it */
 	int dexPage, dexPick; /* the Pokédex's page (36 a page) and the national number picked (0: none) */
+	int summary;          /* the party's member opened in full (-1: none) */
 	/* touches: a tap is taken where the finger went down */
 	bool down, tapped;
 	int tapX, tapY;
-} ui = { .box = -1 };
+} ui = { .box = -1, .summary = -1 };
 
 void poke_touch(int x, int y, bool down) {
 	if (down && !ui.down) ui.tapped = true, ui.tapX = x, ui.tapY = y;
@@ -765,6 +776,78 @@ static void party_card(Emu* e, const Mon* m, int i) {
 	hp_bar(x + 76, y + 48, x + w - 8, m->hp, m->maxHp);
 	hp_numbers(x + w - 8, y + 62, m->hp, m->maxHp, 1);
 	status_tag(x + 76, y + 61, m);
+}
+
+/* a party member in full (a tap on its card): its nature, ability, item, stats, moves and their PP */
+static void party_summary(Emu* e, const Mon* m) {
+	panel(4, TOP + 3, 472, 240, orange, cream);
+	icon_draw(e, m->egg ? 412 : m->species, 14, TOP + 12, 2, animFrame, !m->egg && !m->hp ? 1 : 0);
+	if (m->egg) {
+		text(90, TOP + 30, "蛋", ink, soft, 2);
+		return;
+	}
+	name_and_gender(e, 90, TOP + 10, species_name(e, m->species), m->species, m->pid, 200);
+	char lv[8] = "Lv";
+	number(lv + 2, m->level);
+	text(90, TOP + 40, lv, ink, soft, 2);
+	status_tag(160, TOP + 44, m);
+	/* the left column: nature, ability, item, HP */
+	int y = TOP + 84;
+	text(14, y, "性格", RGB(120, 112, 104), 0, 1);
+	text(56, y, pokeNatureNames[m->pid % 25], ink, 0, 1);
+	y += 18;
+	text(14, y, "特性", RGB(120, 112, 104), 0, 1);
+	if (rom.baseStats) {
+		int ab = emu_read8(e, rom.baseStats + m->species * 28 + 0x16 + m->abilityNum);
+		if (!ab) ab = emu_read8(e, rom.baseStats + m->species * 28 + 0x16);
+		if (ab > 0 && ab < 78 && pokeAbilityNames[ab][0]) text(56, y, pokeAbilityNames[ab], ink, 0, 1);
+	}
+	y += 18;
+	text(14, y, "携带", RGB(120, 112, 104), 0, 1);
+	if (m->item > 0 && m->item < POKE_ITEMS && pokeItemNames[m->item][0]) text_fit(56, y, pokeItemNames[m->item], ink, 0, 1, 170);
+	y += 22;
+	hp_bar(14, y, 226, m->hp, m->maxHp);
+	hp_numbers(226, y + 14, m->hp, m->maxHp, 1);
+	/* the right column: the stats */
+	static const char* const statNames[5] = { "攻击", "防御", "速度", "特攻", "特防" };
+	/* (shown in the games' order: attack, defence, sp. attack, sp. defence, speed) */
+	static const int order[5] = { 1, 2, 4, 5, 3 };
+	panel(244, TOP + 10, 224, 110, navy, RGB(236, 240, 248));
+	for (int i = 0; i < 5; ++i) {
+		int k = order[i];
+		char v[8];
+		number(v, m->stats[k]);
+		text(256, TOP + 18 + i * 20, statNames[k - 1], RGB(80, 88, 112), 0, 1);
+		/* a bar: up to 400 */
+		int len = m->stats[k] * 120 / 400;
+		if (len > 120) len = 120;
+		fill(300, TOP + 22 + i * 20, 300 + len, TOP + 27 + i * 20, RGB(96, 152, 232));
+		text_right(460, TOP + 18 + i * 20, v, ink, 0, 1);
+	}
+	/* the moves */
+	for (int i = 0; i < 4; ++i) {
+		int x = 8 + (i % 2) * 234, y2 = TOP + 166 + (i / 2) * 36, w = 230;
+		if (!m->moves[i]) {
+			panel(x, y2, w, 34, RGB(160, 168, 184), RGB(216, 220, 228));
+			continue;
+		}
+		int t = move_type(e, m->moves[i]);
+		uint32_t tc = t >= 0 ? typeColors[t] : RGB(128, 128, 136);
+		panel(x, y2, w, 34, mix(tc, RGB(0, 0, 0), 30), mix(tc, RGB(255, 255, 255), 78));
+		int tx = x + 6;
+		if (t >= 0) tx = tag(tx, y2 + 9, pokeTypeNames[t], tc) + 6;
+		const char* name = m->moves[i] < POKE_MOVES && pokeMoveNames[m->moves[i]][0] ? pokeMoveNames[m->moves[i]] : "？？？";
+		text_fit(tx, y2 + 9, name, ink, 0, 1, x + w - 60 - tx);
+		char pp[16];
+		number(pp, m->pp[i]);
+		int base = move_pp(e, m->moves[i]), bonus = (m->ppBonuses >> (i * 2)) & 3;
+		if (base) {
+			size_t n = strlen(pp);
+			pp[n] = '/';
+			number(pp + n + 1, base + base * bonus / 5);
+		}
+		text_right(x + w - 8, y2 + 9, pp, ink, 0, 1);
+	}
 }
 
 /* ------------------------------------------------------------------ 对战 */
@@ -1175,7 +1258,16 @@ static void take_tap(Emu* e, const Battler* bat, int mine) {
 	int x = ui.tapX, y = ui.tapY;
 	if (y >= TABS_Y) {
 		int i = (x - 5) / TAB_W;
-		if (i >= 0 && i < N_PAGES && !(i == PAGE_BATTLE && !ui.inBattle)) ui.page = i;
+		if (i >= 0 && i < N_PAGES && !(i == PAGE_BATTLE && !ui.inBattle)) ui.page = i, ui.summary = -1;
+		return;
+	}
+	if (ui.page == PAGE_PARTY) {
+		/* a card: that one in full; again (anywhere): back to the party */
+		if (ui.summary >= 0) ui.summary = -1;
+		else if (y >= TOP + 3) {
+			int c = x >= 240, r = (y - TOP - 3) / 81;
+			if (r < 3) ui.summary = r * 2 + c;
+		}
 		return;
 	}
 	if (ui.page == PAGE_BATTLE && y >= MOVE_Y && rom.actionFn && rom.moveFn && act.move < 0) {
@@ -1293,7 +1385,7 @@ const uint32_t* poke_live_view(Emu* e, const char* romPath) {
 	key = (key ^ emu_read32(e, sb1 + l->moneyOff)) * 16777619u;
 	key = (key ^ (uint32_t) badges_of(e, l)) * 16777619u;
 	if (sb2 >> 24 == 0x02) key = (key ^ (uint32_t) (emu_read16(e, sb2 + 0x0E) << 8 | emu_read8(e, sb2 + 0x10))) * 16777619u;
-	key = (key ^ (uint32_t) (ui.page | ui.inBattle << 4 | mine << 5 | nBat << 8 | canAct << 12 | animFrame << 13)) * 16777619u;
+	key = (key ^ (uint32_t) (ui.page | ui.inBattle << 4 | mine << 5 | nBat << 8 | canAct << 12 | animFrame << 13 | (ui.summary + 1) << 16)) * 16777619u;
 	/* (a page's contents in the key too: read without drawing first) */
 	px = NULL;
 	if (ui.page == PAGE_BAG) page_bag(e, l, &key);
@@ -1321,7 +1413,9 @@ const uint32_t* poke_live_view(Emu* e, const char* romPath) {
 		page_bag(e, l, &k2);
 		break;
 	default:
-		for (int i = 0; i < n; ++i) party_card(e, &mons[i], i);
+		if (ui.summary >= 0 && ui.summary < n) party_summary(e, &mons[ui.summary]);
+		else
+			for (int i = 0; i < n; ++i) party_card(e, &mons[i], i);
 	}
 	tabs();
 	/* (240 × 160 for a frontend that takes the second screen at the GBA's size: every other pixel) */
