@@ -22,6 +22,7 @@
 
 #include "../src/emu.h"
 #include "../src/mapcap.h"
+#include "../src/poke.h"
 #include "../src/profiles.h"
 
 #include <dlfcn.h>
@@ -304,7 +305,16 @@ void retro_run(void) {
 	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &changed) && changed) read_options();
 	attach_save();
 	input_poll_cb();
-	lr_frame(read_keys());
+	/* the Pokémon games' second screen takes touches (its pages): the frame's lower half, a
+	 * second-screen pixel each (polled only for them, so other games' taps stay the frontend's) */
+	if (poke_supported(emu.gameCode)) {
+		bool down = input_state_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_PRESSED);
+		int px = input_state_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_X);
+		int py = input_state_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_Y);
+		int fx = (px + 0x7FFF) * GBA_W / 0xFFFF, fy = (py + 0x7FFF) * (2 * GBA_H) / 0xFFFF - GBA_H;
+		poke_touch(fx, fy, down && fy >= 0);
+	}
+	lr_frame(read_keys() | (poke_supported(emu.gameCode) ? poke_keys() : 0));
 
 	bool dimGame = false;
 	const uint32_t* game = lr_game_picture(&dimGame);

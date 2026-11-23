@@ -22,6 +22,7 @@
 #include "../src/mapcap.h"
 #include "../src/profiles.h"
 #include "../src/logo.h"
+#include "../src/poke.h"
 
 #include <mgba/flags.h>
 #include <mgba/core/core.h>
@@ -234,6 +235,18 @@ int main(int argc, char** argv) {
 			}
 		} else if (!strcmp(cmd, "shot")) {
 			shot(a1);
+		} else if (!strcmp(cmd, "touch")) {
+			/* touch X Y: a tap on the second screen, taken by the next live view (the Pokémon pages) */
+			poke_touch(atoi(a1), atoi(a2), true);
+			poke_touch(atoi(a1), atoi(a2), false);
+		} else if (!strcmp(cmd, "pokerun")) {
+			/* pokerun N: N frames as the player runs them, the live view drawn each and its keys pressed */
+			const MapProfile* lp = profile_find(emu.gameCode);
+			int nf = atoi(a1);
+			for (int i = 0; i < nf; ++i) {
+				if (lp && lp->liveView) lp->liveView(&emu, argv[1]);
+				run(poke_keys(), 1);
+			}
 		} else if (!strcmp(cmd, "live")) {
 			/* live NAME: the profile's own live picture now (liveView), or "no live view" */
 			const MapProfile* lp = profile_find(emu.gameCode);

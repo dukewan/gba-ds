@@ -1,69 +1,112 @@
 #!/usr/bin/env python3
-"""Makes src/poke_data.c: the Pokémon lower screen's data (src/poke.c).
+"""Makes src/poke_data.c: the Pokémon second screen's data (src/poke.c).
 
-  gen_poke_data.py NAMES_CSV FONT_TTF ROM OUT_C
+  gen_poke_data.py CSV_DIR FONT_TTF ROM OUT_C
 
-- Names: each species' Chinese name by the games' internal species number (Gen 3), from PokeAPI's
-  pokemon_species_names.csv (zh-Hans) and the internal-to-national table read from a Gen 3 ROM.
+CSV_DIR holds PokeAPI's data/v2/csv files: pokemon_species_names.csv, move_names.csv,
+item_names.csv, item_game_indices.csv, type_names.csv (zh-Hans, language 12).
+ROM: a Gen 3 game (FireRed), for the internal-to-national species table.
+
+- Names: species by national number (1-1025), moves by number (1-354, the Gen 3 ones), items by
+  their Gen 3 index (PokeAPI's item_game_indices), types in the Gen 3 order. Items PokeAPI has no
+  Chinese name for are named below.
+- pokeNational: the vanilla internal-to-national table, for a ROM where it isn't found.
 - Glyphs: every character the screen writes, rasterized from Fusion Pixel 12px (OFL-1.1,
   github.com/TakWolf/fusion-pixel-font) without smoothing: 12 rows, up to 16 pixels wide.
 """
-import csv, struct, sys
+import csv, os, struct, sys
 from PIL import Image, ImageDraw, ImageFont
 
-names_csv, font_ttf, rom_path, out_c = sys.argv[1:5]
+csv_dir, font_ttf, rom_path, out_c = sys.argv[1:5]
+
+def rows(name):
+    return list(csv.DictReader(open(os.path.join(csv_dir, name), encoding='utf-8')))
 
 rom = open(rom_path, 'rb').read()
-seq = b''.join(struct.pack('<H', i) for i in range(1, 252))
-at = rom.find(seq)
+at = rom.find(b''.join(struct.pack('<H', i) for i in range(1, 252)))
 assert at >= 0, 'species-to-national table not found'
-to_nat = struct.unpack_from('<411H', rom, at)  # entry i: species i + 1
+to_nat = struct.unpack_from('<411H', rom, at)
 assert to_nat[276] == 252, 'not a Gen 3 table'
 
-zh = {int(r['pokemon_species_id']): r['name'] for r in csv.DictReader(open(names_csv, encoding='utf-8'))
-      if r['local_language_id'] == '12'}
-names = ['']  # species 0: none
-for sp in range(1, 412):
-    nat = to_nat[sp - 1]
-    names.append(zh[nat] if 1 <= nat <= 386 else '')  # 252-276: the old Unown slots, unused
+species = {int(r['pokemon_species_id']): r['name'] for r in rows('pokemon_species_names.csv') if r['local_language_id'] == '12'}
+N_NAT = 1025
+nat_names = [''] + [species.get(i, '') for i in range(1, N_NAT + 1)]
 
-UI = '队伍蛋濒死麻痹睡眠中毒灼伤冰冻¥Lv HP/0123456789,?'
-chars = sorted(set(''.join(names) + UI))
+moves = {int(r['move_id']): r['name'] for r in rows('move_names.csv') if r['local_language_id'] == '12'}
+move_names = [''] + [moves.get(i, '') for i in range(1, 355)]
+
+items_zh = {int(r['item_id']): r['name'] for r in rows('item_names.csv') if r['local_language_id'] == '12'}
+gen3 = {int(r['game_index']): int(r['item_id']) for r in rows('item_game_indices.csv') if r['generation_id'] == '3'}
+# Gen 3 items PokeAPI has no Chinese name for (by game index)
+OWN = {
+    121: '橙色邮件', 122: '港口邮件', 123: '闪亮邮件', 124: '机械邮件', 125: '木纹邮件', 126: '波浪邮件',
+    127: '珠子邮件', 128: '影子邮件', 129: '热带邮件', 130: '梦境邮件', 131: '华丽邮件', 132: '复古邮件',
+    269: '得文货物', 273: '宝可方块盒', 281: '1号房钥匙', 282: '2号房钥匙', 283: '4号房钥匙', 284: '6号房钥匙',
+    346: '秘传学习器０８', 352: '自行车兑换券', 360: '自行车', 363: '名人检查器', 365: '树果袋', 366: '教学电视',
+    367: '三岛通行证', 368: '彩虹通行证', 370: '神秘船票', 371: '极光船票', 372: '粉末瓶', 373: '红宝石',
+    374: '蓝宝石', 375: '熔岩队徽章', 376: '古老的海图',
+}
+N_ITEMS = 377
+item_names = []
+for i in range(N_ITEMS):
+    if i in OWN: item_names.append(OWN[i])
+    elif i in gen3 and gen3[i] in items_zh: item_names.append(items_zh[gen3[i]])
+    else: item_names.append('')
+
+types = {int(r['type_id']): r['name'] for r in rows('type_names.csv') if r['local_language_id'] == '12'}
+# Gen 3's order: Normal Fighting Flying Poison Ground Rock Bug Ghost Steel ??? Fire Water Grass Electric
+# Psychic Ice Dragon Dark (PokeAPI's ids 1-9, then ???, then 10-17)
+type_names = [types[i] for i in range(1, 10)] + ['？'] + [types[i] for i in range(10, 18)]
+
+UI = '队伍对战背包蛋濒死麻痹睡眠中毒灼伤冰冻元徽章野生训练家道具精灵球树果学习器重要物品还有个空招式' \
+     'Lv HP PP/0123456789,?？×+…'
+text = ''.join(nat_names + move_names + item_names + type_names) + UI
+chars = sorted(set(text))
 
 font = ImageFont.truetype(font_ttf, 12)
-ascent, descent = font.getmetrics()
 glyphs = []
+missing = []
 for ch in chars:
     adv = int(round(font.getlength(ch)))
     im = Image.new('1', (16, 12), 0)
     d = ImageDraw.Draw(im)
     d.fontmode = '1'
     d.text((0, -3), ch, font=font, fill=1)  # (its glyphs' tops are 3 rows down)
-    rows = []
+    rs = []
     for y in range(12):
         v = 0
         for x in range(16):
             if im.getpixel((x, y)): v |= 1 << x
-        rows.append(v)
-    glyphs.append((ord(ch), min(adv, 16), rows))
+        rs.append(v)
+    if not any(rs) and ch != ' ': missing.append(ch)
+    glyphs.append((ord(ch), min(adv, 16), rs))
 
 def cstr(s):
     return '"' + ''.join('\\x%02x' % b for b in s.encode('utf-8')) + '"'
 
+def table(f, ctype, name, size, values, comment):
+    f.write('/* %s */\n' % comment)
+    f.write('const %s %s[%s] = {\n' % (ctype, name, size))
+    for i, v in enumerate(values):
+        f.write('\t%s, /* %d */\n' % (v, i))
+    f.write('};\n\n')
+
 with open(out_c, 'w') as f:
     f.write('/* Generated by tools/poke/gen_poke_data.py: don\'t edit.\n'
             ' * Glyphs from Fusion Pixel 12px (OFL-1.1, TakWolf/fusion-pixel-font; see tools/poke/OFL.txt).\n'
-            ' * Names: PokeAPI\'s zh-Hans species names. */\n')
+            ' * Names: PokeAPI\'s zh-Hans lists. */\n')
     f.write('#include "poke.h"\n\n')
-    f.write('/* each species\' name (UTF-8) by its internal number; "" for none */\n')
-    f.write('const char* const pokeNames[POKE_SPECIES] = {\n')
-    for i, n in enumerate(names):
-        f.write('\t%s, /* %d */\n' % (cstr(n), i))
-    f.write('};\n\n')
+    table(f, 'char* const', 'pokeNatNames', 'POKE_NATIONAL + 1', [cstr(n) for n in nat_names],
+          'each species\' name (UTF-8) by its national number; "" for none')
+    table(f, 'uint16_t', 'pokeNational', 'POKE_SPECIES', [0] + list(to_nat),
+          'the vanilla games\' internal species number to national')
+    table(f, 'char* const', 'pokeMoveNames', 'POKE_MOVES', [cstr(n) for n in move_names], 'moves by number')
+    table(f, 'char* const', 'pokeItemNames', 'POKE_ITEMS', [cstr(n) for n in item_names], 'items by their Gen 3 index')
+    table(f, 'char* const', 'pokeTypeNames', '18', [cstr(n) for n in type_names], 'types, Gen 3 order')
     f.write('const int pokeGlyphCount = %d;\n' % len(glyphs))
     f.write('/* sorted by code point */\n')
     f.write('const PokeGlyph pokeGlyphs[] = {\n')
-    for cp, adv, rows in glyphs:
-        f.write('\t{ 0x%04X, %d, { %s } },\n' % (cp, adv, ', '.join('0x%04X' % r for r in rows)))
+    for cp, adv, rs in glyphs:
+        f.write('\t{ 0x%04X, %d, { %s } },\n' % (cp, adv, ', '.join('0x%04X' % r for r in rs)))
     f.write('};\n')
-print('%d names, %d glyphs, ascent %d descent %d' % (len(names), len(glyphs), ascent, descent))
+print('%d species, %d moves, %d items, %d glyphs; no glyph: %s' % (N_NAT, 354, sum(1 for n in item_names if n), len(glyphs), ''.join(missing)))
