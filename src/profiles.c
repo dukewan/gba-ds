@@ -1408,6 +1408,8 @@ static uint32_t ft_blend(uint32_t top, uint32_t under, int eva, int evb) {
 	}
 	return o;
 }
+/* (游典) the turn order's entries on the picture as last laid out: x0, y0, x1, y1 (list row k, from 0) */
+static volatile int ftEntry[8][4], ftEntryN;
 static bool ft_turn_layout(uint32_t* o, int w, int h, const uint32_t* lb2, const uint32_t* lb3, int lw, int lh,
                            const uint32_t* wb2, const uint32_t* wb3, int aw, int ah) {
 	/* the list: its lettering in bands (the bar, an entry a band, the line) */
@@ -1516,6 +1518,15 @@ static bool ft_turn_layout(uint32_t* o, int w, int h, const uint32_t* lb2, const
 		}
 	}
 	/* the Laws, without their empty fields */
+	/* (游典) each entry's place on the picture, for a tap on it (touch_more.c) */
+	ftEntryN = 0;
+	for (int k = 0; k < n && k < 8; ++k) {
+		int col = k >= nL, row = k - col * nL;
+		ftEntry[k][0] = ox + col * colW, ftEntry[k][1] = top + p0 + row * sh;
+		ftEntry[k][2] = ftEntry[k][0] + colW - 1, ftEntry[k][3] = ftEntry[k][1] + sh - 1;
+		ftEntryN = k + 1;
+		if (getenv("GBADS_DEBUG")) fprintf(stderr, "ft turn order row %d: %d,%d - %d,%d\n", k + 1, ftEntry[k][0], ftEntry[k][1], ftEntry[k][2], ftEntry[k][3]);
+	}
 	int lx = (w - aw) / 2, ly = top + H + gap;
 	for (int i = 0; i < nRows; ++i) {
 		int y = rowsOf[i], r = -1;
@@ -1538,12 +1549,17 @@ static int ftWw[2], ftWh[2];
 static uint32_t ftTurnRec, ftTurnSig;
 static bool ftTurnTaken;
 static unsigned ftTurnN; /* (turns noticed since the world map, for GBADS_DEBUG) */
+/* (游典) whether the picture shown is the turn order (not a Status), and the turn its list was taken in
+ * (the active unit's record and ft_turn_sig): a tap on it is for that turn's list only (touch_more.c) */
+static volatile bool ftShowsTurn;
+static volatile uint32_t ftListRec, ftListSig;
 /* FT-9's screen from the turn order and the Laws as last taken */
 static void ft_draw_turn(uint32_t* o, int w, int h) {
 	uint32_t (*win)[GBA_W * GBA_H] = ftWin, (*win3)[GBA_W * GBA_H] = ftWin3;
 	int *ww = ftWw, *wh = ftWh;
 	for (int i = 0; i < w * h; ++i) o[i] = SCREEN_GREY;
 	if (ww[0] && ft_turn_layout(o, w, h, win[0], win3[0], ww[0], wh[0], ww[1] ? win[1] : NULL, ww[1] ? win3[1] : NULL, ww[1], ww[1] ? wh[1] : 0)) return;
+	ftEntryN = 0; /* (no entries to tap) */
 	/* (else as before: the Laws above the list, its last rows off the
 	 * bottom) */
 	for (int y = 0; y < wh[1] && ww[1]; ++y) {
@@ -1571,6 +1587,7 @@ static const char* ft_compose(Emu* s, const void* state, uint32_t* const* out, i
 	emu_frame(s, 0);
 	if (ft_world(s)) {
 		ftWw[0] = ftWw[1] = 0; /* (a battle's turn order isn't the next one's) */
+		ftShowsTurn = false, ftEntryN = 0;
 		ftTurnRec = 0, ftTurnN = 0;
 		/* no checkerboard yet (FT-14): taken from the Party screen; the
 		 * Laws aren't drawn until it is (the logo or the last picture
@@ -1608,6 +1625,7 @@ static const char* ft_compose(Emu* s, const void* state, uint32_t* const* out, i
 		if (!ww[0] && !ww[1]) return "not your turn";
 		*nOut = 1;
 		ft_draw_turn(out[0], w, h);
+		ftShowsTurn = true;
 		return NULL;
 	}
 	if (!ft_virt(s, FT_V_IDLE)) return "not on the battle map";
@@ -1663,7 +1681,7 @@ static const char* ft_compose(Emu* s, const void* state, uint32_t* const* out, i
 		else pages = 0;
 		if (!st || turn) {
 			if (ok[0] && !ftTurnTaken && getenv("GBADS_DEBUG")) fprintf(stderr, "ft turn %u (unit %04x): turn order taken\n", ftTurnN, (unsigned) (ftTurnRec & 0xFFFF));
-			if (ok[0]) ftTurnTaken = true;
+			if (ok[0]) ftTurnTaken = true, ftListRec = ftTurnRec, ftListSig = ftTurnSig;
 			for (int i = 0; i < 2; ++i) {
 				if (ok[i]) memcpy(win[i], nw[i], (size_t) a[i] * b[i] * 4), memcpy(win3[i], nw3[i], (size_t) a[i] * b[i] * 4), ww[i] = a[i], wh[i] = b[i];
 			}
@@ -1673,6 +1691,7 @@ static const char* ft_compose(Emu* s, const void* state, uint32_t* const* out, i
 	free(tmp);
 	if (!pages && !ww[0] && !ww[1]) return "nothing opened";
 	*nOut = pages && max >= 2 ? 2 : 1;
+	ftShowsTurn = !pages;
 	for (int n = 0; n < *nOut; ++n) {
 		uint32_t* o = out[n];
 		for (int i = 0; i < w * h; ++i) o[i] = SCREEN_GREY;
@@ -1683,6 +1702,21 @@ static const char* ft_compose(Emu* s, const void* state, uint32_t* const* out, i
 		ft_draw_turn(o, w, h);
 	}
 	return NULL;
+}
+
+int profile_ft_turn_entry(int x, int y) {
+	if (!ftShowsTurn) return -2;
+	for (int k = 0; k < ftEntryN; ++k)
+		if (x >= ftEntry[k][0] && x <= ftEntry[k][2] && y >= ftEntry[k][1] && y <= ftEntry[k][3]) return k;
+	return -1;
+}
+int profile_ft_ui(Emu* e) {
+	return emu_read8(e, FT_UI - (e->gameCode[3] == 'J' ? 0x30 : 0));
+}
+bool profile_ft_turn_ready(Emu* e) {
+	if (!ft_virt(e, FT_V_BATTLE) || ft_virt(e, FT_V_THEIRS) || !ft_bg0(e, FT_MAP_CNT) || profile_ft_ui(e) != 1) return false;
+	uint32_t rec = emu_read32(e, FT_ACTIVE - (e->gameCode[3] == 'J' ? 0x30 : 0));
+	return rec >> 24 == 0x02 && rec == ftListRec && ft_turn_sig(e, rec) == ftListSig;
 }
 
 /* ----------------------------------------------------------- Fire Emblem

@@ -64,7 +64,7 @@ static uint32_t parse_keys(const char* s) {
 
 static void run(uint32_t keys, int n) {
 	for (int i = 0; i < n; ++i) {
-		emu_frame(&emu, keys);
+		emu_frame(&emu, keys | touch_keys()); /* (a tap's own presses: touch.c) */
 		++frameNo;
 	}
 }

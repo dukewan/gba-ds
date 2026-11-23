@@ -2,6 +2,7 @@
 #include "touch.h"
 
 #include "profiles.h"
+#include "touch_more.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -51,13 +52,14 @@ bool touch_gs_tap(Emu* e, int page, int x, int y, int* show);
 static int pageAsked = -1;
 
 bool touch_wanted(Emu* e) {
-	return mc(e) || touch_gs_game(e);
+	return mc(e) || touch_gs_game(e) || touch_more_wanted(e);
 }
 
 bool touch_tap(Emu* e, int page, int x, int y) {
 	pageAsked = -1;
 	if (mc(e)) return mc_tap(e, page, x, y);
 	if (touch_gs_game(e)) return touch_gs_tap(e, page, x, y, &pageAsked);
+	if (touch_more_wanted(e)) return touch_more_tap(e, page, x, y);
 	return false;
 }
 
@@ -66,5 +68,5 @@ int touch_page(void) {
 }
 
 uint32_t touch_keys(void) {
-	return 0;
+	return touch_more_keys();
 }

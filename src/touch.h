@@ -16,7 +16,7 @@ bool touch_tap(Emu* e, int page, int x, int y);
 /* After a tap taken: the page it asks to show (Golden Sun's party row), or -1 — then the game was changed
  * and the pages are to be taken again (or the tap did nothing). */
 int touch_page(void);
-/* Keys pressed for the player this frame (none yet: taps act on the game's memory). */
+/* Keys pressed for the player this frame (a tap's presses on a game's own menus: touch_more.c). */
 uint32_t touch_keys(void);
 
 #endif

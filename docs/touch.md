@@ -23,6 +23,24 @@ Touches are read only for the games below; any other game's taps stay the fronte
   four's). The game itself isn't touched; a battle's Status (one page) takes no taps. (Not the Djinn: the
   page shows how many of each element, not each Djinni, so a tap couldn't say which one to Set or put on
   Standby.)
+- **TOUCH-5 Final Fantasy Tactics Advance.** On the turn order page, a tap on a unit's row puts the
+  battle map's cursor on that unit, as the game's own list (L) does: the list shows on the game screen for
+  a moment, goes to the row and closes, the camera on the unit, and the second screen shows its Status.
+  Only on your turn with nothing open on the map; otherwise a tap on a row does nothing
+  (docs/games/final-fantasy-tactics-advance.md FT-15).
+- **TOUCH-6 Mario & Luigi: Superstar Saga.** Pages only (TOUCH-1): Bros. Info is something to read, and
+  the game has nothing on the field a tap there could point at.
+- **TOUCH-7 MOTHER 3.** Pages only: the area map has no cursor or places to pick in the game, and the
+  Status pages are to read.
+- **TOUCH-8 Summon Night: Swordcraft Story 1 and 2.** Pages only: each page is a character's Status, to
+  read; nothing in the game follows a character chosen there.
+- **TOUCH-9 Tactics Ogre: The Knight of Lodis.** Pages only: the pages are the details of the unit already
+  under the field cursor (or the battle's conditions), so there's nothing else to point the cursor at.
+- **TOUCH-10 Banjo-Kazooie: Grunty's Revenge.** Pages only: its pages are totals, to read.
+- **TOUCH-11 Zoids: Legacy.** Pages only: the world map has no cursor or places to pick in the game, and a
+  Zoid's Status is the one already choosing.
+- **TOUCH-12 Rebelstar: Tactical Command.** Pages only: the pages are the soldier already under the field
+  cursor (or the Objectives), so there's nothing else to point the cursor at.
 
 ## How
 
@@ -31,5 +49,9 @@ libretro/lr_game.inc lr_second_tap (the page held: game.c map_anim_index), src/t
 taps (The Minish Cap: zeldaret/tmc's gItemMenuTable places, gSave.stats.equipped 0x02002AF4, the
 Items page's items read from gPauseMenu.items 0x02000090 as mc_compose takes the page; Golden Sun:
 src/touch_gs.c, the row's places from the game's sprites, the pages' count from gs_compose / gs2_compose,
-a page asked for shown by lr_second_show). Checked in the
+a page asked for shown by lr_second_show).
+; src/touch_more.c
+the others' (Final Fantasy Tactics Advance: the turn order's rows placed as ft_turn_layout draws them,
+then L, DOWN to the row and B pressed for the player — touch_keys — each step checked on FT_UI: 1
+nothing open, 3 or 4 the list up). Checked in the
 harness (`tap2 PAGE X,Y`) and on the AYN Thor in 游典 with a player's own save.
