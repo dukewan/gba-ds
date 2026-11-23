@@ -821,6 +821,10 @@ typedef struct MapProfile {
 } MapProfile;
 
 const MapProfile* profile_find(const char* gameCode);
+/* (游典) The Minish Cap's second-screen pages: what page idx is (1 Items, 2 Collection, 4/5 a map; 0 none),
+ * and the Items page's items in its 16 places as last taken (false: not taken yet). */
+int profile_mc_page_kind(int idx);
+bool profile_mc_items(uint8_t items[16]);
 /* Applies p's romPatch list (all of it, or nothing if any part doesn't
  * match); true if there was one and it went in. */
 bool profile_patch_rom(const MapProfile* p, Emu* e);

@@ -1069,8 +1069,20 @@ static uint64_t mapAnimStart;
 /* which of the map's frames shows now (they turn every frameStep frames
  * from mapAnimStart); never out of range, even with mapAnimStart ahead of
  * frameCount (it once came from the game played before: frames[-1]) */
+/* (游典) a page picked by a tap on the second screen, held a while; then they turn on from it */
+extern volatile int gbads_pagesStill; /* (profiles.c) */
+static int pageHeld = -1;
+static uint64_t pageHeldUntil;
 static int map_anim_index(void) {
-	if (mapRes.nFrames < 1 || frameCount < mapAnimStart) return 0;
+	if (mapRes.nFrames < 1) return 0;
+	if (pageHeld >= 0) {
+		if (frameCount < pageHeldUntil) return pageHeld % mapRes.nFrames;
+		mapAnimStart = frameCount - (uint64_t) (pageHeld % mapRes.nFrames) * (uint64_t) SDL_max(1, mapRes.frameStep);
+		pageHeld = -1;
+		if (gbads_pagesStill) return 0;
+	}
+	if (gbads_pagesStill) return 0;
+	if (frameCount < mapAnimStart) return 0;
 	return (int) (((frameCount - mapAnimStart) / (uint64_t) SDL_max(1, mapRes.frameStep)) % (uint64_t) mapRes.nFrames);
 }
 static bool singleShowsMap;

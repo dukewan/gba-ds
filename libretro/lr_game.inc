@@ -278,3 +278,24 @@ const uint32_t* lr_second_picture(int* w, int* h, bool* dimmed, uint32_t* ground
 	}
 	return lr_texture_pixels(t, w, h);
 }
+
+/* (游典) The second screen shows pages in turn (Fire Emblem's units, The Minish Cap's menus…):
+ * whether it does now, and a tap on it — the next page, held for half a minute. */
+bool lr_second_paged(void) {
+	return mapRes.ok && mapRes.nFrames > 1 && mapRes.frameStep >= 60 && mapShownIdx >= 0;
+}
+void lr_second_tap(void) {
+	if (!lr_second_paged()) return;
+	pageHeld = (map_anim_index() + 1) % mapRes.nFrames;
+	pageHeldUntil = frameCount + 30 * 60;
+	upload_map_frame(pageHeld);
+	fprintf(stderr, "frame %llu: second screen tapped, page %d of %d\n", (unsigned long long) frameCount, pageHeld + 1, mapRes.nFrames);
+}
+int lr_second_page(void) {
+	return lr_second_paged() ? map_anim_index() : (mapShownIdx >= 0 ? 0 : -1);
+}
+/* (游典) a tap changed the game (an item equipped): the second screen's pictures taken again soon, the page
+ * shown kept */
+void lr_second_refresh(void) {
+	forceMap = true;
+}

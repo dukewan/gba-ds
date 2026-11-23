@@ -23,6 +23,7 @@
 #include "../src/profiles.h"
 #include "../src/logo.h"
 #include "../src/poke.h"
+#include "../src/touch.h"
 
 #include <mgba/flags.h>
 #include <mgba/core/core.h>
@@ -239,6 +240,11 @@ int main(int argc, char** argv) {
 			/* touch X Y: a tap on the second screen, taken by the next live view (the Pokémon pages) */
 			poke_touch(atoi(a1), atoi(a2), true);
 			poke_touch(atoi(a1), atoi(a2), false);
+		} else if (!strcmp(cmd, "tap2")) {
+			/* tap2 PAGE X,Y: a tap on the second screen's page PAGE (touch.c) */
+			int tx = 0, ty = 0;
+			sscanf(a2, "%d,%d", &tx, &ty);
+			printf("tap2: %s\n", touch_tap(&emu, atoi(a1), tx, ty) ? "taken" : "not taken");
 		} else if (!strcmp(cmd, "pokerun")) {
 			/* pokerun N: N frames as the player runs them, the live view drawn each and its keys pressed */
 			const MapProfile* lp = profile_find(emu.gameCode);

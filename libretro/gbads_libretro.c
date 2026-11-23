@@ -23,6 +23,12 @@
 #include "../src/emu.h"
 #include "../src/mapcap.h"
 #include "../src/poke.h"
+#include "../src/touch.h"
+
+bool lr_second_paged(void);
+void lr_second_tap(void);
+int lr_second_page(void); /* the page shown now (-1: none) */
+void lr_second_refresh(void);
 #include "../src/profiles.h"
 
 #include <dlfcn.h>
@@ -307,14 +313,23 @@ void retro_run(void) {
 	input_poll_cb();
 	/* the Pokémon games' second screen takes touches (its pages): the frame's lower half, a
 	 * second-screen pixel each (polled only for them, so other games' taps stay the frontend's) */
-	if (poke_supported(emu.gameCode)) {
+	/* (a game whose second screen turns pages, or has its own taps: GBA DS's touch.c) */
+	bool pokemon = poke_supported(emu.gameCode);
+	if (pokemon || lr_second_paged() || touch_wanted(&emu)) {
+		static bool wasDown;
 		bool down = input_state_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_PRESSED);
 		int px = input_state_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_X);
 		int py = input_state_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_Y);
 		int fx = (px + 0x7FFF) * GBA_W / 0xFFFF, fy = (py + 0x7FFF) * (2 * GBA_H) / 0xFFFF - GBA_H;
-		poke_touch(fx, fy, down && fy >= 0);
+		down = down && fy >= 0;
+		if (pokemon) poke_touch(fx, fy, down);
+		else if (down && !wasDown) {
+			if (touch_tap(&emu, lr_second_page(), fx, fy)) lr_second_refresh();
+			else lr_second_tap();
+		}
+		wasDown = down;
 	}
-	lr_frame(read_keys() | (poke_supported(emu.gameCode) ? poke_keys() : 0));
+	lr_frame(read_keys() | (poke_supported(emu.gameCode) ? poke_keys() : touch_keys()));
 
 	bool dimGame = false;
 	const uint32_t* game = lr_game_picture(&dimGame);

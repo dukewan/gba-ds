@@ -4271,10 +4271,18 @@ static bool mc_settle(Emu* s, int need, int most) {
 	return run >= need;
 }
 volatile int gbads_mapOnly = 1;
+/* the pages don't turn by themselves (the first shown, the others by a tap on the second screen) */
+volatile int gbads_pagesStill;
 
 /* the order they're shown in: a map, Items, the Collection, then whatever else */
 static int mc_rank(int page) { return page == 4 || page == 5 ? 0 : page == 1 ? 1 : page == 2 ? 2 : 3 + page; }
 #define MC_PAGES 5
+/* (游典) the pages' kinds as last composed, and the Items page's items in its 16 places (gPauseMenu.items,
+ * 0x02000090: the game puts them there as the page opens) */
+static volatile int mcPageKind[8];
+static uint8_t mcItems[16];
+static volatile bool mcItemsTaken;
+
 static const char* mc_compose(Emu* s, const void* state, uint32_t* const* out, int* nOut, int* step, int w, int h) {
 	int max = *nOut;
 	*nOut = 1;
@@ -4294,6 +4302,10 @@ static const char* mc_compose(Emu* s, const void* state, uint32_t* const* out, i
 		if (seen) break; /* (round again, or the R didn't turn it) */
 		page[n] = at;
 		bk_copy(s, out[n], w, h);
+		if (at == 1) {
+			for (int i = 0; i < 16; ++i) mcItems[i] = emu_read8(s, 0x02000090 + i);
+			mcItemsTaken = true;
+		}
 		++n;
 		if (n == max) break;
 		aw_run(s, K_R, 4);
@@ -4316,9 +4328,21 @@ static const char* mc_compose(Emu* s, const void* state, uint32_t* const* out, i
 	free(tmp);
 	/* 只显示地图: the map alone once there is one, not the pages in turn (QQ群 R33, 谭天说地 and another:
 	 * 「下屏固定地图页」); before the castle gives it, Items and Collection in turn as before */
-	if (gbads_mapOnly && n > 1 && (page[0] == 4 || page[0] == 5)) n = 1;
+	/* (游典: all the pages kept; the map stays put — gbads_pagesStill — and a tap turns to the others) */
+	gbads_pagesStill = gbads_mapOnly && n > 1 && (page[0] == 4 || page[0] == 5);
 	*nOut = n;
+	/* (游典) what each page is, and the Items page's items in its places, for a tap on it (touch.c) */
+	for (int i = 0; i < MC_PAGES; ++i) mcPageKind[i] = i < n ? page[i] : 0;
 	return NULL;
+}
+
+int profile_mc_page_kind(int idx) {
+	return idx >= 0 && idx < MC_PAGES ? mcPageKind[idx] : 0;
+}
+bool profile_mc_items(uint8_t items[16]) {
+	if (!mcItemsTaken) return false;
+	memcpy(items, mcItems, 16);
+	return true;
 }
 
 /* Wario Land 4 (both releases): the screen the game is on, 0x03000C3A
