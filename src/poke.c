@@ -1090,9 +1090,24 @@ static TileSet* tileset_load(Emu* e, uint32_t at, int slot) {
 #define MAP_Y (TOP + 3)
 #define MAP_H 242
 
+/* the map drawn without the player, kept until the map or the view changes (drawing it is the slow part:
+ * the dot is drawn over a copy each time) */
+static uint32_t mapBase[472 * MAP_H];
+static struct {
+	uint32_t layout;
+	int vx, vy, ox, oy, dw, dh;
+	double sc;
+	bool valid;
+} mapCache;
+
+static uint16_t rom16(uint32_t a) {
+	uint32_t o = a - 0x08000000;
+	return o + 1 < rom.size ? (uint16_t) (rom.bytes[o] | rom.bytes[o + 1] << 8) : 0;
+}
+
 static void page_map(Emu* e, const Layout* l, uint32_t* key) {
 	uint32_t layout = emu_read32(e, l->mapHeader);
-	if (layout >> 24 != 0x08) return;
+	if (layout >> 24 != 0x08 || !rom.bytes) return;
 	int mapW = (int) emu_read32(e, layout), Hb = (int) emu_read32(e, layout + 4);
 	uint32_t blocks = emu_read32(e, layout + 12), p0 = emu_read32(e, layout + 16), p1 = emu_read32(e, layout + 20);
 	if (mapW <= 0 || Hb <= 0 || mapW > 1024 || Hb > 1024 || blocks >> 24 != 0x08) return;
@@ -1102,55 +1117,64 @@ static void page_map(Emu* e, const Layout* l, uint32_t* key) {
 	*key = (*key ^ (uint32_t) (pxb << 16 | (pyb & 0xFFFF))) * 16777619u;
 	*key = (*key ^ (uint32_t) animFrame) * 16777619u;
 	if (!px) return;
-	TileSet* t0 = tileset_load(e, p0, 0);
-	TileSet* t1 = tileset_load(e, p1, 1);
-	if (!t0 || !t1) return;
+	/* (another game: nothing kept) */
+	static uint32_t forCrc;
+	if (forCrc != rom.crc) forCrc = rom.crc, mapCache.valid = false, tsets[0].at = tsets[1].at = 0;
 	int aw = 472, ah = MAP_H, ax = 4, ay = MAP_Y;
 	fill(ax - 2, ay - 2, ax + aw + 1, ay + ah + 1, navy);
 	/* the scale (map pixels to page pixels): whole if at half size or more, else half round the player */
 	int fw = mapW * 16, fh = Hb * 16;
 	double sc = (double) aw / fw < (double) ah / fh ? (double) aw / fw : (double) ah / fh;
 	if (sc > 1.5) sc = 1.5;
-	double vx = 0, vy = 0;
+	int vx = 0, vy = 0;
 	int dw = (int) (fw * sc), dh = (int) (fh * sc);
 	if (sc < 0.5) {
 		sc = 0.5;
 		dw = aw, dh = ah;
-		vx = pxb * 16 + 8 - aw / sc / 2, vy = pyb * 16 + 8 - ah / sc / 2;
-		if (vx > fw - aw / sc) vx = fw - aw / sc;
-		if (vy > fh - ah / sc) vy = fh - ah / sc;
+		/* (the view moves a block at a time: redrawn only then) */
+		vx = (pxb * 16 + 8 - (int) (aw / sc / 2)) / 16 * 16, vy = (pyb * 16 + 8 - (int) (ah / sc / 2)) / 16 * 16;
+		if (vx > fw - (int) (aw / sc)) vx = fw - (int) (aw / sc);
+		if (vy > fh - (int) (ah / sc)) vy = fh - (int) (ah / sc);
 		if (vx < 0) vx = 0;
 		if (vy < 0) vy = 0;
 	}
-	int ox = ax + (aw - dw) / 2, oy = ay + (ah - dh) / 2;
-	fill(ax, ay, ax + aw - 1, ay + ah - 1, RGB(24, 32, 48));
-	int PT = l->primaryTiles, PP = l->primaryPals;
-	for (int y = 0; y < dh; ++y) {
-		int my = (int) (vy + y / sc);
-		if (my >= fh) break;
-		for (int x = 0; x < dw; ++x) {
-			int mx = (int) (vx + x / sc);
-			if (mx >= fw) break;
-			int id = emu_read16(e, blocks + ((my / 16) * mapW + mx / 16) * 2) & 0x3FF;
-			uint32_t meta = id < PT ? t0->metatiles + id * 16 : t1->metatiles + (id - PT) * 16;
-			int sub = ((my % 16) / 8) * 2 + (mx % 16) / 8, tx0 = mx % 8, ty0 = my % 8;
-			uint32_t c = t0->pal[0][0];
-			for (int layer = 0; layer < 2; ++layer) {
-				int en = emu_read16(e, meta + (layer * 4 + sub) * 2);
-				int tile = en & 0x3FF, pal = en >> 12;
-				int tx = en & 0x400 ? 7 - tx0 : tx0, ty = en & 0x800 ? 7 - ty0 : ty0;
-				const uint8_t* td = tile < PT ? t0->tiles + tile * 32 : t1->tiles + (tile - PT) * 32;
-				if (td + 32 > (tile < PT ? t0->tiles : t1->tiles) + sizeof(t0->tiles)) continue;
-				int v = td[ty * 4 + tx / 2];
-				v = tx & 1 ? v >> 4 : v & 15;
-				if (!v) continue; /* (see-through: the layer below, or the backdrop) */
-				c = (pal < PP ? t0 : t1)->pal[pal][v];
+	int ox = (aw - dw) / 2, oy = (ah - dh) / 2;
+	if (!(mapCache.valid && mapCache.layout == layout && mapCache.vx == vx && mapCache.vy == vy && mapCache.sc == sc)) {
+		TileSet* t0 = tileset_load(e, p0, 0);
+		TileSet* t1 = tileset_load(e, p1, 1);
+		if (!t0 || !t1) return;
+		for (int i = 0; i < aw * ah; ++i) mapBase[i] = RGB(24, 32, 48);
+		int PT = l->primaryTiles, PP = l->primaryPals;
+		for (int y = 0; y < dh; ++y) {
+			int my = (int) (vy + y / sc);
+			if (my >= fh) break;
+			for (int x = 0; x < dw; ++x) {
+				int mx = (int) (vx + x / sc);
+				if (mx >= fw) break;
+				int id = rom16(blocks + ((my / 16) * mapW + mx / 16) * 2) & 0x3FF;
+				uint32_t meta = id < PT ? t0->metatiles + id * 16 : t1->metatiles + (id - PT) * 16;
+				int sub = ((my % 16) / 8) * 2 + (mx % 16) / 8, tx0 = mx % 8, ty0 = my % 8;
+				uint32_t c = t0->pal[0][0];
+				for (int layer = 0; layer < 2; ++layer) {
+					int en = rom16(meta + (layer * 4 + sub) * 2);
+					int tile = en & 0x3FF, pal = en >> 12;
+					int tx = en & 0x400 ? 7 - tx0 : tx0, ty = en & 0x800 ? 7 - ty0 : ty0;
+					const TileSet* ts = tile < PT ? t0 : t1;
+					int ti = tile < PT ? tile : tile - PT;
+					if (ti >= 1024) continue;
+					int v = ts->tiles[ti * 32 + ty * 4 + tx / 2];
+					v = tx & 1 ? v >> 4 : v & 15;
+					if (!v) continue; /* (see-through: the layer below, or the backdrop) */
+					c = (pal < PP ? t0 : t1)->pal[pal][v];
+				}
+				mapBase[(oy + y) * aw + ox + x] = c;
 			}
-			px[(oy + y) * HW + ox + x] = c;
 		}
+		mapCache = (typeof(mapCache)) { layout, vx, vy, ox, oy, dw, dh, sc, true };
 	}
+	for (int y = 0; y < ah; ++y) memcpy(px + (ay + y) * HW + ax, mapBase + y * aw, (size_t) aw * 4);
 	/* the player: a red dot with a white ring, pulsing */
-	int cx = ox + (int) ((pxb * 16 + 8 - vx) * sc), cy = oy + (int) ((pyb * 16 + 8 - vy) * sc);
+	int cx = ax + ox + (int) ((pxb * 16 + 8 - vx) * sc), cy = ay + oy + (int) ((pyb * 16 + 8 - vy) * sc);
 	int r = animFrame ? 7 : 6;
 	for (int dy = -r - 2; dy <= r + 2; ++dy)
 		for (int dx = -r - 2; dx <= r + 2; ++dx) {
