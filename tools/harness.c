@@ -240,6 +240,18 @@ int main(int argc, char** argv) {
 			/* touch X Y: a tap on the second screen, taken by the next live view (the Pokémon pages) */
 			poke_touch(atoi(a1), atoi(a2), true);
 			poke_touch(atoi(a1), atoi(a2), false);
+		} else if (!strcmp(cmd, "livehi")) {
+			/* livehi NAME: the Pokémon page at 480 x 320 (poke_page_hi), after a live view */
+			const MapProfile* lp = profile_find(emu.gameCode);
+			if (lp && lp->liveView) lp->liveView(&emu, argv[1]);
+			const uint32_t* hi = poke_page_hi();
+			if (!hi) printf("livehi %s: none\n", a1);
+			else {
+				char path[512];
+				snprintf(path, sizeof(path), "%s/%s.png", outdir, a1);
+				write_png(path, hi, 480, 320, 480);
+				printf("livehi %s: written\n", a1);
+			}
 		} else if (!strcmp(cmd, "tap2")) {
 			/* tap2 PAGE X,Y: a tap on the second screen's page PAGE (touch.c) */
 			int tx = 0, ty = 0;

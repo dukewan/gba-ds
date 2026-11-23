@@ -299,3 +299,8 @@ int lr_second_page(void) {
 void lr_second_refresh(void) {
 	forceMap = true;
 }
+/* (游典) the game has a second screen of its own (a map, status or HUD made for it): a tap on a one-page one
+ * takes it again at once */
+bool lr_second_any(void) {
+	return mc != NULL && mapShownIdx >= 0;
+}

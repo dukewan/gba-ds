@@ -43,6 +43,7 @@ typedef struct {
 	uint32_t battlers;   /* gBattlersCount: 4 in a double battle */
 	uint32_t storagePtr, storage; /* the PC's boxes: a pointer (FRLG, E) or where they are (RS) */
 	uint32_t inBattle;            /* gMain's inBattle byte (bit 1), found by a dump in and out of a battle */
+	uint32_t sb2;                 /* save block 2 where it's fixed (RS; FRLG / E: sb2Ptr): the Pokédex, play time */
 } Layout;
 
 static const Layout layouts[] = {
@@ -51,25 +52,25 @@ static const Layout layouts[] = {
 	  0x03004FE0, 0x02023FF8, 0x02023FFC,
 	  "\xf0\xb5\x47\x46\x80\xb4\x16\x4f\x16\x4c\x20\x78\x42\x02\xb9\x1c\x51\x18\x0d\x78\xf9\x1c\x52\x18\x11\x78\x09\x02\x0d\x43\x01\x21",
 	  "\x00\xb5\x47\xf7\x41\xf8\x07\x4a\x07\x49\x08\x48\x00\x78\x80\x00\x40\x18\x11\x68\x00\x68\x01\x40\x00\x29\x01\xd1\x01\xf0\x7a\xf8", 0x34C,
-	  0x40000, 0x02023BCC, 0x03005010, 0, 0x03003529 },
+	  0x40000, 0x02023BCC, 0x03005010, 0, 0x03003529, 0 },
 	{ "Emerald", 0x030022C0, 0x020244E9, 0x020244EC, 0x02024744, 0x02024084, 0x03005D8C, 0x03005D90, 0,
 	  0xAC, 0x490, 0x1270, 0x867, { { 0x560, 30 }, { 0x650, 16 }, { 0x790, 46 }, { 0x690, 64 }, { 0x5D8, 30 } },
 	  0x03005D60, 0x020244AC, 0x020244B0,
 	  "\xf0\xb5\x13\x4b\x13\x4c\x20\x78\x42\x02\x99\x1c\x51\x18\x0d\x78\x03\x33\xd2\x18\x11\x78\x09\x02\x0d\x43\x01\x21\x07\x22\x01\x23",
 	  "\xf0\xb5\x47\x46\x80\xb4\x00\x20\x80\x46\x0a\x4b\x18\x78\x40\x02\x09\x49\x46\x18\x09\x4a\x91\x8d\xf0\x20\x08\x40\x1f\x1c\x00\x28", 0x674,
-	  0, 0x0202406C, 0x03005D94, 0, 0x030026F9 },
+	  0, 0x0202406C, 0x03005D94, 0, 0x030026F9, 0 },
 	{ "Ruby / Sapphire", 0x03001770, 0x03004350, 0x03004360, 0x030045C0, 0x02024A80, 0, 0, 0x02025734,
 	  0, 0x490, 0x1220, 0x807, { { 0x560, 20 }, { 0x600, 16 }, { 0x740, 46 }, { 0x640, 64 }, { 0x5B0, 20 } },
 	  0x03004330, 0x02024E60, 0x02024E64,
 	  "\xf0\xb5\x47\x46\x80\xb4\x17\x4f\x17\x4c\x20\x78\x42\x02\xb9\x1c\x51\x18\x0d\x78\xf9\x1c\x52\x18\x11\x78\x09\x02\x0d\x43\x01\x21",
 	  "\xf0\xb5\x47\x46\x80\xb4\x82\xb0\x00\x20\x80\x46\x12\x4f\x3a\x78\x50\x02\x12\x49\x46\x18\x12\x48\xc1\x8d\x01\x25\x2c\x1c\x0c\x40", 0x5F4,
-	  0, 0x02024A68, 0, 0x020300A0, 0x03001BAD },
+	  0, 0x02024A68, 0, 0x020300A0, 0x03001BAD, 0x02024EA4 },
 	{ "Ruby / Sapphire (Japan)", 0x030016E0, 0x03004280, 0x03004290, 0x030044F0, 0x020247E0, 0, 0, 0x02025494,
 	  0, 0x490, 0x1220, 0x807, { { 0x560, 20 }, { 0x600, 16 }, { 0x740, 46 }, { 0x640, 64 }, { 0x5B0, 20 } },
 	  0x03004260, 0x02024BC0, 0x02024BC4,
 	  "\xf0\xb5\x47\x46\x80\xb4\x16\x4f\x16\x4c\x20\x78\x42\x02\xb9\x1c\x51\x18\x0d\x78\xf9\x1c\x52\x18\x11\x78\x09\x02\x0d\x43\x01\x21",
 	  "\xf0\xb5\x47\x46\x80\xb4\x82\xb0\x00\x20\x80\x46\x12\x4e\x32\x78\x50\x02\x12\x49\x47\x18\x12\x48\xc1\x8d\x01\x25\x2c\x1c\x0c\x40", 0x5DC,
-	  0, 0x020247C8, 0, 0x0202FDC0, 0x03001B19 },
+	  0, 0x020247C8, 0, 0x0202FDC0, 0x03001B19, 0x02024C04 },
 };
 #define N_LAYOUTS (int) (sizeof(layouts) / sizeof(layouts[0]))
 
@@ -238,6 +239,8 @@ typedef struct {
 	bool egg;
 	int level, hp, maxHp;
 	uint32_t status;
+	uint32_t pid; /* personality: the gender, the icon's look */
+	int item;     /* held */
 } Mon;
 
 static const char orders[24][5] = {
@@ -270,6 +273,8 @@ static bool mon_decode(const uint8_t* b, Mon* m) {
 		if (o[i] == 'M') misc = d + i * 12;
 	}
 	m->species = le16(g);
+	m->item = le16(g + 2);
+	m->pid = pid;
 	m->egg = (le32(misc + 4) >> 30) & 1;
 	m->status = le32(b + 80);
 	m->level = b[84];
@@ -298,6 +303,7 @@ static int party_read(Emu* e, uint32_t a, int most, Mon* mons, uint32_t* key) {
 typedef struct {
 	Mon m;
 	int moves[4], pp[4], maxPp[4];
+	int type1, type2;
 } Battler;
 
 static bool battler_read(Emu* e, uint32_t a, Battler* b, uint32_t* key) {
@@ -310,6 +316,9 @@ static bool battler_read(Emu* e, uint32_t a, Battler* b, uint32_t* key) {
 	b->m.level = raw[0x2A];
 	b->m.maxHp = le16(raw + 0x2C);
 	b->m.status = le32(raw + 0x4C);
+	b->m.item = le16(raw + 0x2E);
+	b->m.pid = le32(raw + 0x48);
+	b->type1 = raw[0x21], b->type2 = raw[0x22];
 	if (b->m.species <= 0 || b->m.species > 2047 || b->m.maxHp <= 0 || b->m.hp > b->m.maxHp || b->m.level < 1 || b->m.level > 100)
 		return false;
 	for (int i = 0; i < 4; ++i) {
@@ -328,6 +337,20 @@ static uint32_t key_of(Emu* e, const Layout* l) {
 	return l->keyOff ? emu_read32(e, emu_read32(e, l->sb2Ptr) + l->keyOff) : 0;
 }
 
+static uint32_t sb2_of(Emu* e, const Layout* l) {
+	return l->sb2Ptr ? emu_read32(e, l->sb2Ptr) : l->sb2;
+}
+
+/* -1 genderless, 0 male, 1 female (the species' ratio in its base stats against the personality's low byte) */
+static int gender_of(Emu* e, int species, uint32_t pid) {
+	if (!rom.baseStats || species <= 0 || species > 2047) return -1;
+	int ratio = emu_read8(e, rom.baseStats + species * 28 + 0x10);
+	if (ratio == 255) return -1;
+	if (ratio == 254) return 1;
+	if (ratio == 0) return 0;
+	return (int) (pid & 0xFF) < ratio;
+}
+
 static int badges_of(Emu* e, const Layout* l) {
 	uint32_t flags = sb1_of(e, l) + l->flagsOff;
 	int n = 0;
@@ -338,26 +361,46 @@ static int badges_of(Emu* e, const Layout* l) {
 	return n;
 }
 
-/* ------------------------------------------------------------------ drawing */
+/* ------------------------------------------------------------------ drawing
+ *
+ * The pages are drawn at twice the GBA's resolution, 480 × 320 (the frame 游典 gets is 480 × 640 for these
+ * games: libretro/gbads_libretro.c): the panels' edges and bars in GBA pixels (two of these), the words in
+ * the 12-pixel font at its own size or doubled, the Pokémon's icons at twice their size where there's room. */
 
 #define RGB(r, g, b) (0xFF000000u | (uint32_t) (b) << 16 | (uint32_t) (g) << 8 | (uint32_t) (r))
+#define HW 480
+#define HH 320
 
 static uint32_t* px;
 
 static void put(int x, int y, uint32_t c) {
-	if (px && x >= 0 && x < W && y >= 0 && y < H) px[y * W + x] = c;
+	if (px && x >= 0 && x < HW && y >= 0 && y < HH) px[y * HW + x] = c;
 }
 
 static void fill(int x0, int y0, int x1, int y1, uint32_t c) {
+	if (!px) return;
+	if (x0 < 0) x0 = 0;
+	if (y0 < 0) y0 = 0;
+	if (x1 >= HW) x1 = HW - 1;
+	if (y1 >= HH) y1 = HH - 1;
 	for (int y = y0; y <= y1; ++y)
-		for (int x = x0; x <= x1; ++x) put(x, y, c);
+		for (int x = x0; x <= x1; ++x) px[y * HW + x] = c;
 }
 
-/* a box with its corners cut: an edge, a face */
+static uint32_t mix(uint32_t a, uint32_t b, int share) {
+	int r = (a & 0xFF) + (((int) (b & 0xFF) - (int) (a & 0xFF)) * share) / 100;
+	int g = ((a >> 8) & 0xFF) + ((((int) (b >> 8) & 0xFF) - (int) ((a >> 8) & 0xFF)) * share) / 100;
+	int bl = ((a >> 16) & 0xFF) + ((((int) (b >> 16) & 0xFF) - (int) ((a >> 16) & 0xFF)) * share) / 100;
+	return RGB(r, g, bl);
+}
+
+/* a box with its corners cut, a 2-pixel edge, a face, a lighter line along its top */
 static void panel(int x, int y, int w, int h, uint32_t edge, uint32_t face) {
-	fill(x + 1, y, x + w - 2, y + h - 1, edge);
-	fill(x, y + 1, x + w - 1, y + h - 2, edge);
-	fill(x + 1, y + 1, x + w - 2, y + h - 2, face);
+	fill(x + 2, y, x + w - 3, y + h - 1, edge);
+	fill(x, y + 2, x + w - 1, y + h - 3, edge);
+	fill(x + 2, y + 2, x + w - 3, y + h - 3, face);
+	fill(x + 4, y + 2, x + w - 5, y + 3, mix(face, RGB(255, 255, 255), 60));
+	fill(x + 4, y + h - 5, x + w - 5, y + h - 4, mix(face, RGB(0, 0, 0), 12));
 }
 
 static uint32_t grey(uint32_t c, int share) {
@@ -371,31 +414,36 @@ static uint32_t bgr555(uint16_t c) {
 	return RGB(r * 255 / 31, g * 255 / 31, b * 255 / 31);
 }
 
-/* a Poké Ball, for a Pokémon the ROM has no icon of (a hack's new ones), size x size */
-static void ball(int x, int y, int size, bool greyed) {
-	int r = size / 2 - 2, cx = x + size / 2, cy = y + size / 2;
+/* a Poké Ball, size across: (a hack's Pokémon the ROM has no icon of; a team's member in a battle) */
+static void ball(int x, int y, int size, int state) {
+	/* state 0: a whole one, 1: fainted (grey), 2: none (an outline) */
+	int r = size / 2 - 1, cx = x + size / 2, cy = y + size / 2;
 	for (int dy = -r; dy <= r; ++dy)
 		for (int dx = -r; dx <= r; ++dx) {
 			int d = dx * dx + dy * dy;
 			if (d > r * r) continue;
-			uint32_t c = d > (r - 1) * (r - 1) || (dy >= -1 && dy <= 0) ? RGB(40, 40, 48) : dy < 0 ? RGB(232, 64, 56) : RGB(248, 248, 248);
-			if (dx * dx + dy * dy <= 4) c = RGB(248, 248, 248);
-			put(cx + dx, cy + dy, greyed ? grey(c, 70) : c);
+			bool rim = d > (r - 2) * (r - 2), band = dy >= -1 && dy <= 0, hub = d <= (r / 3) * (r / 3);
+			uint32_t c = rim || band ? RGB(40, 40, 48) : dy < 0 ? RGB(232, 64, 56) : RGB(248, 248, 248);
+			if (hub) c = d <= (r / 3 - 2) * (r / 3 - 2) ? RGB(248, 248, 248) : RGB(40, 40, 48);
+			if (state == 2 && !rim) continue;
+			put(cx + dx, cy + dy, state == 1 ? grey(c, 80) : state == 2 ? RGB(120, 136, 168) : c);
 		}
 }
 
-/* species' first icon frame at (x, y), at full size (32x32) or half; greyed: a fainted one */
-static void icon_draw(Emu* e, int species, int x, int y, bool half, bool greyed) {
-	if (!rom.icons || species >= 440) {
-		ball(x, y, half ? 16 : 32, greyed);
+/* species' icon at (x, y), scale 1 (32 × 32) or 2 (64 × 64); frame 0 or 1 (the games' own two-frame
+ * bob); look: 0 as it is, 1 greyed (fainted), 2 a silhouette (seen, not caught) */
+static void icon_draw(Emu* e, int species, int x, int y, int scale, int frame, int look) {
+	if (!rom.icons || species >= 440 || species <= 0) {
+		ball(x, y, 32 * scale, look == 1 ? 1 : 0);
 		return;
 	}
 	uint32_t gfx = emu_read32(e, rom.iconTable + species * 4);
 	int pal = emu_read8(e, rom.iconIndices + species);
 	if ((gfx >> 24) < 0x08 || (gfx >> 24) > 0x09 || pal > 5) {
-		ball(x, y, half ? 16 : 32, greyed);
+		ball(x, y, 32 * scale, look == 1 ? 1 : 0);
 		return;
 	}
+	gfx += frame ? 512 : 0;
 	uint32_t pp = emu_read32(e, rom.iconPalettes + pal * 8);
 	uint32_t colors[16];
 	for (int i = 0; i < 16; ++i) colors[i] = bgr555(emu_read16(e, pp + i * 2));
@@ -404,9 +452,11 @@ static void icon_draw(Emu* e, int species, int x, int y, bool half, bool greyed)
 		for (int r = 0; r < 8; ++r) {
 			uint32_t row = emu_read32(e, gfx + t * 32 + r * 4);
 			for (int c = 0; c < 8; ++c) {
-				int v = (row >> (c * 4)) & 15, X = tx + c, Y = ty + r;
-				if (!v || (half && ((X | Y) & 1))) continue;
-				put(x + (half ? X / 2 : X), y + (half ? Y / 2 : Y), greyed ? grey(colors[v], 70) : colors[v]);
+				int v = (row >> (c * 4)) & 15;
+				if (!v) continue;
+				uint32_t col = look == 1 ? grey(colors[v], 75) : look == 2 ? RGB(56, 72, 112) : colors[v];
+				int X = x + (tx + c) * scale, Y = y + (ty + r) * scale;
+				fill(X, Y, X + scale - 1, Y + scale - 1, col);
 			}
 		}
 	}
@@ -433,84 +483,100 @@ static unsigned utf8_next(const char** s) {
 	return c;
 }
 
-static int text_width(const char* s) {
+static int text_width(const char* s, int scale) {
 	int w = 0;
 	while (*s) {
 		const PokeGlyph* g = glyph(utf8_next(&s));
-		w += g ? g->adv : 6;
+		w += (g ? g->adv : 6) * scale;
 	}
 	return w;
 }
 
-/* text with its top at y, cut off past x + most (most 0: whole); shadow: drawn first a pixel right
- * and down (0: none) */
-static void text_fit(int x, int y, const char* s, uint32_t color, uint32_t shadow, int most) {
+/* words with their top at y, at scale 1 (12 pixels high) or 2, cut off past x + most (0: whole);
+ * shadow: drawn first one scale-pixel right and down (0: none). Returns the right edge. */
+static int text_fit(int x, int y, const char* s, uint32_t color, uint32_t shadow, int scale, int most) {
+	int end = x;
 	for (int pass = shadow ? 0 : 1; pass < 2; ++pass) {
-		int cx = x + (pass ? 0 : 1), cy = y + (pass ? 0 : 1);
+		int cx = x + (pass ? 0 : scale), cy = y + (pass ? 0 : scale);
 		const char* p = s;
 		while (*p) {
 			const PokeGlyph* g = glyph(utf8_next(&p));
-			int adv = g ? g->adv : 6;
+			int adv = (g ? g->adv : 6) * scale;
 			if (most && cx + adv - x > most) break;
 			if (g)
 				for (int r = 0; r < 12; ++r)
 					for (int c = 0; c < 16; ++c)
-						if (g->rows[r] >> c & 1) put(cx + c, cy + r, pass ? color : shadow);
+						if (g->rows[r] >> c & 1) fill(cx + c * scale, cy + r * scale, cx + c * scale + scale - 1, cy + r * scale + scale - 1, pass ? color : shadow);
 			cx += adv;
 		}
+		end = cx;
 	}
+	return end;
 }
-static void text(int x, int y, const char* s, uint32_t color, uint32_t shadow) {
-	text_fit(x, y, s, color, shadow, 0);
+static int text(int x, int y, const char* s, uint32_t color, uint32_t shadow, int scale) {
+	return text_fit(x, y, s, color, shadow, scale, 0);
+}
+static void text_right(int right, int y, const char* s, uint32_t color, uint32_t shadow, int scale) {
+	text(right - text_width(s, scale), y, s, color, shadow, scale);
+}
+static void text_mid(int mid, int y, const char* s, uint32_t color, uint32_t shadow, int scale) {
+	text(mid - text_width(s, scale) / 2, y, s, color, shadow, scale);
 }
 
 static void number(char* out, int v) {
 	char d[12];
 	int k = 0;
+	if (v < 0) *out++ = '-', v = -v;
 	do d[k++] = '0' + v % 10, v /= 10;
 	while (v && k < 11);
 	while (k) *out++ = d[--k];
 	*out = 0;
 }
 
-/* "HP", 3x5 pixel letters, for the bar's label */
+/* "HP", 3×5 letters in GBA pixels (2 × 2 each) */
 static void hp_label(int x, int y, uint32_t c, uint32_t shadow) {
 	static const char* const letters[2] = { "101101111101101", "111101111100100" };
 	for (int pass = 0; pass < 2; ++pass)
 		for (int l = 0; l < 2; ++l)
 			for (int i = 0; i < 15; ++i)
-				if (letters[l][i] == '1') put(x + l * 4 + i % 3 + !pass, y + i / 3 + !pass, pass ? c : shadow);
+				if (letters[l][i] == '1') {
+					int X = x + (l * 4 + i % 3) * 2 + (pass ? 0 : 2), Y = y + (i / 3) * 2 + (pass ? 0 : 2);
+					fill(X, Y, X + 1, Y + 1, pass ? c : shadow);
+				}
 }
 
-static const uint32_t ink = RGB(48, 48, 56), soft = RGB(208, 208, 200), cream = RGB(248, 248, 232), navy = RGB(56, 72, 112);
+static const uint32_t ink = RGB(48, 48, 56), soft = RGB(208, 208, 200), cream = RGB(248, 248, 236), navy = RGB(56, 72, 112),
+                      white = RGB(248, 248, 248), orange = RGB(232, 96, 64);
 
-/* the HP bar, (bw + 12) wide: its label, the track, the share left in green / yellow / red */
-static void hp_bar(int bx, int by, int bw, int hp, int maxHp) {
-	fill(bx - 1, by - 1, bx + bw + 12, by + 5, RGB(64, 64, 72));
-	fill(bx, by, bx + 10, by + 4, RGB(232, 176, 64));
-	hp_label(bx + 1, by, RGB(248, 248, 248), RGB(160, 96, 32));
-	fill(bx + 12, by, bx + bw + 11, by + 4, RGB(80, 88, 96));
+/* the HP bar from x to right: its label, the track, the share left in green / yellow / red; 10 high */
+static void hp_bar(int x, int y, int right, int hp, int maxHp) {
+	fill(x, y, right, y + 11, RGB(64, 64, 72));
+	fill(x + 2, y + 2, x + 23, y + 9, RGB(232, 176, 64));
+	hp_label(x + 4, y + 1, white, RGB(160, 96, 32));
+	int t0 = x + 26, t1 = right - 2;
+	fill(t0, y + 2, t1, y + 9, RGB(80, 88, 96));
 	if (!hp || maxHp <= 0) return;
-	int share = hp * 100 / maxHp, len = (bw - 1) * hp / maxHp;
-	uint32_t hi = share > 50 ? RGB(96, 224, 120) : share > 20 ? RGB(248, 216, 64) : RGB(248, 88, 64);
+	int share = hp * 100 / maxHp, len = (t1 - t0) * hp / maxHp;
+	if (len < 2) len = 2;
+	uint32_t hi = share > 50 ? RGB(112, 232, 128) : share > 20 ? RGB(248, 216, 64) : RGB(248, 88, 64);
 	uint32_t lo = share > 50 ? RGB(56, 168, 80) : share > 20 ? RGB(200, 160, 32) : RGB(184, 48, 40);
-	fill(bx + 12, by, bx + 12 + len, by + 4, lo);
-	fill(bx + 12, by, bx + 12 + len, by + 2, hi);
+	fill(t0, y + 2, t0 + len, y + 9, lo);
+	fill(t0, y + 2, t0 + len, y + 5, hi);
 }
 
-static void hp_numbers(int right, int y, int hp, int maxHp) {
+static void hp_numbers(int right, int y, int hp, int maxHp, int scale) {
 	char s[16];
 	number(s, hp);
 	size_t n = strlen(s);
 	s[n] = '/';
 	number(s + n + 1, maxHp);
-	text(right - text_width(s), y, s, ink, soft);
+	text_right(right, y, s, ink, soft, scale);
 }
 
-static void level(int right, int y, int lv) {
+static void level(int right, int y, int lv, int scale) {
 	char s[8] = "Lv";
 	number(s + 2, lv);
-	text(right - text_width(s), y, s, ink, soft);
+	text_right(right, y, s, ink, soft, scale);
 }
 
 static const char* status_name(const Mon* m, uint32_t* color) {
@@ -523,12 +589,27 @@ static const char* status_name(const Mon* m, uint32_t* color) {
 	return NULL;
 }
 
-static void status_tag(int x, int y, const Mon* m) {
+/* a tag: a coloured box with white words (1×), x, y its top left; returns its right edge */
+static int tag(int x, int y, const char* s, uint32_t color) {
+	int w = text_width(s, 1) + 8;
+	fill(x + 1, y, x + w - 2, y + 15, color);
+	fill(x, y + 1, x + w - 1, y + 14, color);
+	text(x + 4, y + 2, s, white, mix(color, RGB(0, 0, 0), 40), 1);
+	return x + w;
+}
+
+static int status_tag(int x, int y, const Mon* m) {
 	uint32_t sc;
 	const char* st = status_name(m, &sc);
-	if (!st) return;
-	fill(x, y, x + text_width(st) + 3, y + 12, sc);
-	text(x + 2, y, st, RGB(248, 248, 248), 0);
+	return st ? tag(x, y, st, sc) : x;
+}
+
+/* the name with its gender sign after it, scale 2, cut at most wide; returns the right edge */
+static int name_and_gender(Emu* e, int x, int y, const char* name, int species, uint32_t pid, int most) {
+	int end = text_fit(x, y, name, ink, soft, 2, most - 24);
+	int g = gender_of(e, species, pid);
+	if (g >= 0) end = text(end + 2, y, g ? "♀" : "♂", g ? RGB(232, 80, 104) : RGB(56, 112, 232), soft, 2);
+	return end;
 }
 
 static const uint32_t typeColors[18] = {
@@ -537,18 +618,54 @@ static const uint32_t typeColors[18] = {
 	RGB(120, 200, 80), RGB(248, 208, 48), RGB(248, 88, 136), RGB(152, 216, 216), RGB(112, 56, 248), RGB(112, 88, 72),
 };
 
+/* Gen 3's type chart: how much a move of type a does to type d, in quarters (4 = normal) */
+static int effect_one(int a, int d) {
+	enum { NOR, FIG, FLY, POI, GRO, ROC, BUG, GHO, STE, MYS, FIR, WAT, GRA, ELE, PSY, ICE, DRA, DAR };
+	static const signed char chart[][3] = {
+		/* attacker, defender, 8 = ×2, 2 = ×½, 0 = none */
+		{ NOR, ROC, 2 }, { NOR, STE, 2 }, { NOR, GHO, 0 },
+		{ FIG, NOR, 8 }, { FIG, ICE, 8 }, { FIG, ROC, 8 }, { FIG, DAR, 8 }, { FIG, STE, 8 }, { FIG, POI, 2 }, { FIG, FLY, 2 }, { FIG, PSY, 2 }, { FIG, BUG, 2 }, { FIG, GHO, 0 },
+		{ FLY, GRA, 8 }, { FLY, FIG, 8 }, { FLY, BUG, 8 }, { FLY, ELE, 2 }, { FLY, ROC, 2 }, { FLY, STE, 2 },
+		{ POI, GRA, 8 }, { POI, POI, 2 }, { POI, GRO, 2 }, { POI, ROC, 2 }, { POI, GHO, 2 }, { POI, STE, 0 },
+		{ GRO, FIR, 8 }, { GRO, ELE, 8 }, { GRO, POI, 8 }, { GRO, ROC, 8 }, { GRO, STE, 8 }, { GRO, GRA, 2 }, { GRO, BUG, 2 }, { GRO, FLY, 0 },
+		{ ROC, FIR, 8 }, { ROC, ICE, 8 }, { ROC, FLY, 8 }, { ROC, BUG, 8 }, { ROC, FIG, 2 }, { ROC, GRO, 2 }, { ROC, STE, 2 },
+		{ BUG, GRA, 8 }, { BUG, PSY, 8 }, { BUG, DAR, 8 }, { BUG, FIR, 2 }, { BUG, FIG, 2 }, { BUG, POI, 2 }, { BUG, FLY, 2 }, { BUG, GHO, 2 }, { BUG, STE, 2 },
+		{ GHO, PSY, 8 }, { GHO, GHO, 8 }, { GHO, DAR, 2 }, { GHO, STE, 2 }, { GHO, NOR, 0 },
+		{ STE, ICE, 8 }, { STE, ROC, 8 }, { STE, FIR, 2 }, { STE, WAT, 2 }, { STE, ELE, 2 }, { STE, STE, 2 },
+		{ FIR, GRA, 8 }, { FIR, ICE, 8 }, { FIR, BUG, 8 }, { FIR, STE, 8 }, { FIR, FIR, 2 }, { FIR, WAT, 2 }, { FIR, ROC, 2 }, { FIR, DRA, 2 },
+		{ WAT, FIR, 8 }, { WAT, GRO, 8 }, { WAT, ROC, 8 }, { WAT, WAT, 2 }, { WAT, GRA, 2 }, { WAT, DRA, 2 },
+		{ GRA, WAT, 8 }, { GRA, GRO, 8 }, { GRA, ROC, 8 }, { GRA, FIR, 2 }, { GRA, GRA, 2 }, { GRA, POI, 2 }, { GRA, FLY, 2 }, { GRA, BUG, 2 }, { GRA, DRA, 2 }, { GRA, STE, 2 },
+		{ ELE, WAT, 8 }, { ELE, FLY, 8 }, { ELE, ELE, 2 }, { ELE, GRA, 2 }, { ELE, DRA, 2 }, { ELE, GRO, 0 },
+		{ PSY, FIG, 8 }, { PSY, POI, 8 }, { PSY, PSY, 2 }, { PSY, STE, 2 }, { PSY, DAR, 0 },
+		{ ICE, GRA, 8 }, { ICE, GRO, 8 }, { ICE, FLY, 8 }, { ICE, DRA, 8 }, { ICE, FIR, 2 }, { ICE, WAT, 2 }, { ICE, ICE, 2 }, { ICE, STE, 2 },
+		{ DRA, DRA, 8 }, { DRA, STE, 2 },
+		{ DAR, PSY, 8 }, { DAR, GHO, 8 }, { DAR, FIG, 2 }, { DAR, DAR, 2 }, { DAR, STE, 2 },
+	};
+	for (size_t i = 0; i < sizeof(chart) / sizeof(chart[0]); ++i)
+		if (chart[i][0] == a && chart[i][1] == d) return chart[i][2];
+	return 4;
+}
+/* in sixteenths: 16 normal, 0 none, 64 ×4… */
+static int effect(int a, int d1, int d2) {
+	int e1 = effect_one(a, d1);
+	int e2 = d2 != d1 && d2 >= 0 && d2 < 18 ? effect_one(a, d2) : 4;
+	return e1 * e2;
+}
+
 /* ------------------------------------------------------------------ pages */
 
-enum { PAGE_PARTY, PAGE_BATTLE, PAGE_BOX, PAGE_BAG, N_PAGES };
-static const char* const pageNames[N_PAGES] = { "队伍", "对战", "箱子", "背包" };
+enum { PAGE_PARTY, PAGE_BATTLE, PAGE_DEX, PAGE_BOX, PAGE_BAG, N_PAGES };
+static const char* const pageNames[N_PAGES] = { "队伍", "对战", "图鉴", "箱子", "背包" };
+static const uint32_t pageColors[N_PAGES] = { RGB(216, 72, 64), RGB(232, 136, 40), RGB(64, 160, 96), RGB(40, 144, 168), RGB(80, 104, 200) };
 static const char* const pocketNames[5] = { "道具", "精灵球", "树果", "学习器", "重要物品" };
 
 static struct {
 	int page, pageBefore; /* before the battle, gone back to after it */
 	bool inBattle;
 	int pocket, bagStart;
-	int box;      /* the box shown (-1: the game's current one) */
-	int boxPick;  /* the place picked in it */
+	int box;     /* the box shown (-1: the game's current one) */
+	int boxPick; /* the place picked in it */
+	int dexPage, dexPick; /* the Pokédex's page (36 a page) and the national number picked (0: none) */
 	/* touches: a tap is taken where the finger went down */
 	bool down, tapped;
 	int tapX, tapY;
@@ -559,29 +676,44 @@ void poke_touch(int x, int y, bool down) {
 	ui.down = down;
 }
 
-#define TAB_W 30
+#define TOP 32      /* the bar along the top's height */
+#define TABS_Y 278  /* the tabs along the bottom */
+#define TAB_W 94
+
 static int tab_x(int i) {
-	return 2 + i * (TAB_W + 1);
+	return 5 + i * TAB_W;
 }
 
-static void header(Emu* e, const Layout* l) {
-	fill(0, 0, W - 1, 15, RGB(40, 56, 96));
-	fill(0, 16, W - 1, 16, RGB(24, 32, 56));
-	for (int i = 0; i < N_PAGES; ++i) {
-		int x = tab_x(i);
-		bool on = ui.page == i, off = i == PAGE_BATTLE && !ui.inBattle;
-		if (on) panel(x, 1, TAB_W, 14, RGB(120, 144, 208), RGB(80, 104, 168));
-		text(x + 3, 2, pageNames[i], off ? RGB(96, 112, 152) : RGB(248, 248, 248), on ? RGB(40, 56, 96) : RGB(24, 32, 56));
-	}
+static void ground(void) {
+	for (int y = TOP; y < TABS_Y; ++y)
+		for (int x = 0; x < HW; ++x) px[y * HW + x] = (x / 16 + y / 16) % 2 ? RGB(104, 168, 192) : RGB(112, 176, 200);
+}
+
+static void top_bar(Emu* e, const Layout* l) {
+	fill(0, 0, HW - 1, TOP - 3, RGB(40, 56, 96));
+	fill(0, TOP - 2, HW - 1, TOP - 1, RGB(24, 32, 56));
 	/* the badges: eight gems, lit once won */
 	int badges = badges_of(e, l);
+	text(8, 4, "徽章", RGB(176, 192, 232), RGB(24, 32, 56), 1);
 	for (int i = 0; i < 8; ++i) {
-		int x = 128 + i * 6, y = 5;
+		int x = 36 + i * 16, y = 6;
 		bool won = badges >> i & 1;
 		uint32_t c = won ? RGB(248, 208, 64) : RGB(64, 80, 128), hi = won ? RGB(255, 248, 200) : RGB(88, 104, 152);
-		fill(x + 1, y, x + 3, y + 4, c);
-		fill(x, y + 1, x + 4, y + 3, c);
-		put(x + 1, y + 1, hi);
+		fill(x + 3, y, x + 8, y + 11, c);
+		fill(x, y + 3, x + 11, y + 8, c);
+		fill(x + 1, y + 1, x + 10, y + 10, c);
+		fill(x + 3, y + 2, x + 5, y + 4, hi);
+	}
+	/* the play time */
+	uint32_t sb2 = sb2_of(e, l);
+	if (sb2 >> 24 == 0x02) {
+		int hours = emu_read16(e, sb2 + 0x0E), minutes = emu_read8(e, sb2 + 0x10);
+		char t[24] = "⏱ ";
+		number(t + strlen(t), hours);
+		strcat(t, ":");
+		if (minutes < 10) strcat(t, "0");
+		number(t + strlen(t), minutes);
+		text(180, 4, t, white, RGB(24, 32, 56), 2);
 	}
 	uint32_t sb1 = sb1_of(e, l), money = emu_read32(e, sb1 + l->moneyOff) ^ key_of(e, l);
 	if (money <= 999999) {
@@ -593,105 +725,226 @@ static void header(Emu* e, const Layout* l) {
 			if ((k - 1 - i) && (k - 1 - i) % 3 == 0) m[n++] = ',';
 		}
 		strcpy(m + n, "元");
-		text(W - 4 - text_width(m), 2, m, RGB(248, 232, 128), RGB(24, 32, 56));
+		text_right(HW - 8, 4, m, RGB(248, 232, 128), RGB(24, 32, 56), 2);
 	}
 }
+
+static void tabs(void) {
+	fill(0, TABS_Y - 2, HW - 1, HH - 1, RGB(32, 40, 64));
+	for (int i = 0; i < N_PAGES; ++i) {
+		int x = tab_x(i);
+		bool on = ui.page == i, off = i == PAGE_BATTLE && !ui.inBattle;
+		uint32_t c = off ? RGB(72, 80, 104) : on ? mix(pageColors[i], RGB(255, 255, 255), 15) : mix(pageColors[i], RGB(0, 0, 0), 30);
+		panel(x, TABS_Y + (on ? 0 : 3), TAB_W - 4, HH - TABS_Y - (on ? 2 : 5), on ? white : mix(c, RGB(0, 0, 0), 35), c);
+		text_mid(x + (TAB_W - 4) / 2, TABS_Y + (on ? 7 : 10), pageNames[i], off ? RGB(128, 136, 160) : white, mix(c, RGB(0, 0, 0), 45), 2);
+	}
+}
+
+/* ------------------------------------------------------------------ 队伍 */
+
+static int animFrame; /* the icons' two frames, in turn (as the games' own party screens bob them) */
 
 static void party_card(Emu* e, const Mon* m, int i) {
-	int x = 4 + (i % 2) * 118, y = 20 + (i / 2) * 46, w = 114, h = 43;
+	int x = 4 + (i % 2) * 238, y = TOP + 3 + (i / 2) * 81, w = 234, h = 78;
 	bool fainted = !m->egg && !m->hp;
-	panel(x, y, w, h, i == 0 ? RGB(232, 96, 64) : navy, fainted ? RGB(200, 192, 184) : cream);
-	fill(x + 2, y + 2, x + w - 3, y + 2, RGB(255, 255, 255));
-	fill(x + 2, y + h - 4, x + w - 3, y + h - 3, fainted ? RGB(176, 168, 160) : RGB(216, 208, 184));
-	icon_draw(e, m->egg ? 412 : m->species, x + 1, y + 4, false, fainted);
+	panel(x, y, w, h, i == 0 ? orange : navy, fainted ? RGB(208, 200, 192) : cream);
+	icon_draw(e, m->egg ? 412 : m->species, x + 4, y + 7, 2, fainted ? 0 : animFrame, fainted ? 1 : 0);
 	if (m->egg) {
-		text(x + 34, y + 4, "蛋", ink, soft);
+		text(x + 76, y + 8, "蛋", ink, soft, 2);
 		return;
 	}
-	text_fit(x + 34, y + 4, species_name(e, m->species), ink, soft, w - 34 - 30);
-	level(x + w - 5, y + 4, m->level);
-	int bx = x + 34, by = y + 20, bw = w - 34 - 12 - 5;
-	hp_bar(bx, by, bw, m->hp, m->maxHp);
-	hp_numbers(bx + bw + 12, by + 7, m->hp, m->maxHp);
-	status_tag(bx, by + 8, m);
-}
-
-static void ground(void) {
-	for (int y = 17; y < H; ++y)
-		for (int x = 0; x < W; ++x) px[y * W + x] = (x / 8 + y / 8) % 2 ? RGB(104, 168, 192) : RGB(112, 176, 200);
-}
-
-/* a battler's panel: icon, name, level, HP, condition (x, y: its top left; w wide, 38 high);
- * lit: its moves are the ones shown */
-static void battler_panel(Emu* e, const Battler* b, int x, int y, int w, bool lit) {
-	panel(x, y, w, 38, lit ? RGB(232, 96, 64) : navy, cream);
-	fill(x + 2, y + 2, x + w - 3, y + 2, RGB(255, 255, 255));
-	icon_draw(e, b->m.species, x + 2, y + 3, false, !b->m.hp);
-	text_fit(x + 36, y + 3, species_name(e, b->m.species), ink, soft, w - 36 - 30);
-	level(x + w - 5, y + 3, b->m.level);
-	int bx = x + 36, by = y + 17, bw = w - 36 - 12 - 6;
-	hp_bar(bx, by, bw, b->m.hp, b->m.maxHp);
-	hp_numbers(bx + bw + 12, by + 7, b->m.hp, b->m.maxHp);
-	status_tag(bx, by + 8, &b->m);
-}
-
-/* the battle: bat[0..3] as the game numbers them (0, 2 the player's; 1, 3 the foe's), 2 or 4 of
- * them; `mine` the player's Pokémon whose moves are shown (0, or 2 when it's that one's turn) */
-static void page_battle(Emu* e, const Battler* bat, int nBat, int mine, const Mon* team, int nTeam) {
-	if (nBat == 4) {
-		/* a double battle: the foe's two, the player's two, side by side */
-		battler_panel(e, &bat[1], 4, 19, 114, false);
-		battler_panel(e, &bat[3], 122, 19, 114, false);
-		battler_panel(e, &bat[0], 4, 59, 114, mine == 0);
-		battler_panel(e, &bat[2], 122, 59, 114, mine == 2);
-	} else {
-		/* the foe, its team beside it in a trainer's battle (wild: one) */
-		bool trainer = nTeam > 1;
-		battler_panel(e, &bat[1], 4, 19, trainer ? 166 : 232, false);
-		if (trainer) {
-			panel(172, 19, 64, 38, navy, RGB(232, 232, 216));
-			for (int i = 0; i < nTeam && i < 6; ++i)
-				icon_draw(e, team[i].species, 175 + (i % 3) * 20, 21 + (i / 3) * 17, true, !team[i].hp);
-		}
-		battler_panel(e, &bat[0], 4, 59, 232, true);
+	name_and_gender(e, x + 76, y + 4, species_name(e, m->species), m->species, m->pid, w - 76 - 8);
+	/* the level, and what it holds */
+	char lv[8] = "Lv";
+	number(lv + 2, m->level);
+	int after = text(x + 76, y + 32, lv, ink, soft, 1) + 8;
+	if (m->item > 0 && m->item < POKE_ITEMS && pokeItemNames[m->item][0]) {
+		fill(after, y + 35, after + 5, y + 40, RGB(232, 176, 64));
+		text_fit(after + 9, y + 32, pokeItemNames[m->item], RGB(112, 104, 96), 0, 1, x + w - 8 - after - 9);
 	}
-	/* the moves, two by two: name, type, PP */
+	hp_bar(x + 76, y + 48, x + w - 8, m->hp, m->maxHp);
+	hp_numbers(x + w - 8, y + 62, m->hp, m->maxHp, 1);
+	status_tag(x + 76, y + 61, m);
+}
+
+/* ------------------------------------------------------------------ 对战 */
+
+/* a battler's card: icon (2×), name and gender, level, HP; lit: the player's whose turn it is */
+static void battler_card(Emu* e, const Battler* b, int x, int y, int w, bool lit, bool mine) {
+	panel(x, y, w, 64, lit ? orange : navy, cream);
+	icon_draw(e, b->m.species, x + 4, y + 1, 2, b->m.hp ? animFrame : 0, b->m.hp ? 0 : 1);
+	int right = x + w - 8;
+	name_and_gender(e, x + 72, y + 4, species_name(e, b->m.species), b->m.species, b->m.pid, w - 72 - 70);
+	level(right, y + 4, b->m.level, 2);
+	hp_bar(x + 72, y + 32, right, b->m.hp, b->m.maxHp);
+	if (mine || w > 300) hp_numbers(right, y + 47, b->m.hp, b->m.maxHp, 1);
+	status_tag(x + 72, y + 46, &b->m);
+}
+
+#define MOVE_Y 170
+#define MOVE_W 177
+#define MOVE_H 50
+#define ACT_X 362
+
+static const char* const actionNames[3] = { "背包", "宝可梦", "逃跑" };
+static const uint32_t actionColors[3] = { RGB(80, 120, 216), RGB(72, 168, 96), RGB(120, 128, 152) };
+
+/* the battle: bat[0..3] as the game numbers them (0, 2 the player's; 1, 3 the foe's), 2 or 4 of them;
+ * `mine` the player's Pokémon whose moves are shown (0, or 2 when it's that one's turn) */
+static void page_battle(Emu* e, const Battler* bat, int nBat, int mine, const Mon* team, int nTeam, bool canAct) {
+	if (nBat == 4) {
+		battler_card(e, &bat[1], 4, TOP + 3, 234, false, false);
+		battler_card(e, &bat[3], 242, TOP + 3, 234, false, false);
+		battler_card(e, &bat[0], 4, TOP + 70, 234, mine == 0, true);
+		battler_card(e, &bat[2], 242, TOP + 70, 234, mine == 2, true);
+	} else {
+		bool trainer = nTeam > 1;
+		battler_card(e, &bat[1], 4, TOP + 3, trainer ? 354 : 472, false, false);
+		if (trainer) {
+			/* the trainer's team, as the games show it: a ball each, grey once fainted */
+			panel(362, TOP + 3, 114, 64, navy, RGB(232, 232, 220));
+			for (int i = 0; i < 6; ++i)
+				ball(370 + (i % 3) * 34, TOP + 9 + (i / 3) * 28, 24, i >= nTeam ? 2 : team[i].hp ? 0 : 1);
+		}
+		battler_card(e, &bat[0], 4, TOP + 70, 472, true, true);
+	}
+	/* the moves, two by two: name, type, how well it does against the foe, PP */
 	const Battler* me = &bat[mine];
+	const Battler* foe = &bat[nBat == 4 ? 1 : 1];
 	for (int i = 0; i < 4; ++i) {
-		int x = 4 + (i % 2) * 118, y = 99 + (i / 2) * 30, w = 114;
+		int x = 4 + (i % 2) * (MOVE_W + 2), y = MOVE_Y + (i / 2) * (MOVE_H + 2), w = MOVE_W;
 		if (!me->moves[i]) {
-			panel(x, y, w, 29, RGB(88, 112, 152), RGB(144, 168, 200));
+			panel(x, y, w, MOVE_H, RGB(88, 112, 152), RGB(144, 168, 200));
 			continue;
 		}
 		int t = move_type(e, me->moves[i]);
 		uint32_t tc = t >= 0 ? typeColors[t] : RGB(128, 128, 136);
-		panel(x, y, w, 29, navy, cream);
-		fill(x + 1, y + 1, x + 4, y + 27, tc);
+		bool empty = !me->pp[i];
+		panel(x, y, w, MOVE_H, mix(tc, RGB(0, 0, 0), 30), empty ? RGB(200, 200, 200) : mix(tc, RGB(255, 255, 255), 75));
 		const char* name = me->moves[i] < POKE_MOVES && pokeMoveNames[me->moves[i]][0] ? pokeMoveNames[me->moves[i]] : "？？？";
-		text_fit(x + 8, y + 2, name, ink, soft, w - 12);
-		if (t >= 0) {
-			int tw = text_width(pokeTypeNames[t]);
-			fill(x + 8, y + 15, x + 8 + tw + 3, y + 26, tc);
-			text(x + 10, y + 15, pokeTypeNames[t], RGB(248, 248, 248), RGB(40, 40, 48));
+		text_fit(x + 8, y + 5, name, ink, mix(tc, RGB(255, 255, 255), 50), 2, w - 14);
+		int tx = x + 8;
+		if (t >= 0) tx = tag(tx, y + 31, pokeTypeNames[t], tc) + 3;
+		/* (status moves, power 0: no tag) */
+		int power = rom.moves && me->moves[i] < POKE_MOVES ? emu_read8(e, rom.moves + me->moves[i] * 12 + 1) : 0;
+		if (t >= 0 && power > 0 && nBat == 2 && foe->m.species > 0) {
+			int f = effect(t, foe->type1, foe->type2);
+			if (f >= 32) tag(tx, y + 31, "效果绝佳", RGB(208, 64, 48));
+			else if (f == 0) tag(tx, y + 31, "没有效果", RGB(72, 72, 80));
+			else if (f < 16) tag(tx, y + 31, "效果不好", RGB(128, 128, 144));
 		}
-		char pp[16] = "PP ";
-		number(pp + 3, me->pp[i]);
+		char pp[16];
+		number(pp, me->pp[i]);
 		if (me->maxPp[i]) {
 			size_t n = strlen(pp);
 			pp[n] = '/';
 			number(pp + n + 1, me->maxPp[i]);
 		}
 		bool low = me->maxPp[i] ? me->pp[i] * 4 <= me->maxPp[i] : me->pp[i] == 0;
-		text(x + w - 5 - text_width(pp), y + 15, pp, low ? RGB(200, 64, 48) : ink, soft);
+		text_right(x + w - 8, y + 33, pp, low ? RGB(200, 64, 48) : ink, 0, 1);
+	}
+	/* the other actions: the game's own bag, Pokémon and run, as its menu would */
+	for (int i = 0; i < 3; ++i) {
+		int y = MOVE_Y + i * 35;
+		uint32_t c = canAct ? actionColors[i] : RGB(128, 136, 152);
+		panel(ACT_X, y, 114, 33, mix(c, RGB(0, 0, 0), 35), c);
+		text_mid(ACT_X + 57, y + 5, actionNames[i], white, mix(c, RGB(0, 0, 0), 45), 2);
 	}
 }
 
-/* ------------------------------------------------------------------ the PC's boxes */
+/* ------------------------------------------------------------------ 图鉴 */
+
+#define DEX_N 386
+#define DEX_COLS 9
+#define DEX_ROWS 4
+#define DEX_PER (DEX_COLS * DEX_ROWS)
+#define DEX_Y (TOP + 34)
+#define DEX_CW 52
+#define DEX_CH 50
+
+static bool dex_bit(Emu* e, uint32_t base, int nat) {
+	return (emu_read8(e, base + (nat - 1) / 8) >> ((nat - 1) % 8)) & 1;
+}
+
+/* the internal species of a national number (0: none found) */
+static int species_of_national(Emu* e, int nat) {
+	static int cache[POKE_NATIONAL + 1];
+	static uint32_t cacheFor;
+	if (cacheFor != rom.crc) {
+		memset(cache, 0, sizeof(cache));
+		cacheFor = rom.crc;
+		for (int s = 1; s <= 440; ++s) {
+			int n = national_of(e, s);
+			if (n > 0 && n <= POKE_NATIONAL && !cache[n]) cache[n] = s;
+		}
+	}
+	return nat > 0 && nat <= POKE_NATIONAL ? cache[nat] : 0;
+}
+
+static void page_dex(Emu* e, const Layout* l, uint32_t* key) {
+	uint32_t sb2 = sb2_of(e, l);
+	if (sb2 >> 24 != 0x02) return;
+	uint32_t owned = sb2 + 0x28, seen = sb2 + 0x5C;
+	int nOwned = 0, nSeen = 0;
+	for (int i = 0; i < 49; ++i) {
+		int o = emu_read8(e, owned + i), s = emu_read8(e, seen + i);
+		*key = (*key ^ (uint32_t) (o | s << 8)) * 16777619u;
+		for (int b = 0; b < 8; ++b) nOwned += o >> b & 1, nSeen += s >> b & 1;
+	}
+	int pages = (DEX_N + DEX_PER - 1) / DEX_PER;
+	if (ui.dexPage < 0 || ui.dexPage >= pages) ui.dexPage = 0;
+	*key = (*key ^ (uint32_t) (ui.dexPage | ui.dexPick << 8 | animFrame << 20)) * 16777619u;
+	if (!px) return;
+	/* the counts, or the one picked; the page's arrows */
+	panel(4, TOP + 3, 472, 30, navy, RGB(80, 104, 168));
+	if (ui.dexPick > 0) {
+		char s[64] = "No.";
+		if (ui.dexPick < 100) strcat(s, "0");
+		if (ui.dexPick < 10) strcat(s, "0");
+		number(s + strlen(s), ui.dexPick);
+		strcat(s, " ");
+		strcat(s, pokeNatNames[ui.dexPick]);
+		strcat(s, dex_bit(e, owned, ui.dexPick) ? "  已捕获" : dex_bit(e, seen, ui.dexPick) ? "  已见" : "");
+		text(14, TOP + 6, dex_bit(e, seen, ui.dexPick) ? s : "No.？？？", white, RGB(40, 56, 96), 2);
+	} else {
+		char s[48] = "已捕获 ";
+		number(s + strlen(s), nOwned);
+		strcat(s, "  已见 ");
+		number(s + strlen(s), nSeen);
+		text(14, TOP + 6, s, white, RGB(40, 56, 96), 2);
+	}
+	char pg[16];
+	number(pg, ui.dexPage + 1);
+	strcat(pg, "/");
+	number(pg + strlen(pg), pages);
+	text_mid(398, TOP + 9, pg, RGB(208, 216, 240), 0, 1);
+	for (int d = 0; d < 2; ++d) {
+		int ax = d ? 444 : 336;
+		panel(ax, TOP + 6, 28, 24, RGB(32, 40, 72), RGB(64, 88, 152));
+		for (int i = 0; i < 7; ++i) fill(d ? ax + 18 - i : ax + 10 + i, TOP + 18 - i, d ? ax + 18 - i : ax + 10 + i, TOP + 18 + i, white);
+	}
+	for (int i = 0; i < DEX_PER; ++i) {
+		int nat = ui.dexPage * DEX_PER + i + 1;
+		if (nat > DEX_N) break;
+		int x = 6 + (i % DEX_COLS) * DEX_CW, y = DEX_Y + (i / DEX_COLS) * DEX_CH;
+		bool o = dex_bit(e, owned, nat), s = dex_bit(e, seen, nat);
+		uint32_t face = nat == ui.dexPick ? RGB(248, 216, 160) : o ? cream : s ? RGB(208, 216, 224) : RGB(168, 184, 200);
+		panel(x, y, DEX_CW - 4, DEX_CH - 4, nat == ui.dexPick ? orange : navy, face);
+		char n[8];
+		number(n, nat);
+		text(x + 4, y + 3, n, o ? RGB(160, 80, 64) : RGB(104, 112, 128), 0, 1);
+		int sp = s ? species_of_national(e, nat) : 0;
+		if (sp) icon_draw(e, sp, x + 8, y + 10, 1, o ? animFrame : 0, o ? 0 : 2);
+	}
+}
+
+/* ------------------------------------------------------------------ 箱子 */
 
 typedef struct {
 	int species; /* 0: an empty place */
 	bool egg;
-	uint32_t exp;
+	uint32_t exp, pid;
+	int item;
 } Boxed;
 
 /* a boxed Pokémon (the party's first 80 bytes); false: not whole */
@@ -714,7 +967,9 @@ static bool boxed_decode(const uint8_t* b, Boxed* m) {
 		if (o[i] == 'M') misc = d + i * 12;
 	}
 	m->species = le16(g);
+	m->item = le16(g + 2);
 	m->exp = le32(g + 4);
+	m->pid = pid;
 	m->egg = (le32(misc + 4) >> 30) & 1;
 	return m->species > 0 && m->species <= 2047;
 }
@@ -723,9 +978,10 @@ static uint32_t storage_of(Emu* e, const Layout* l) {
 	return l->storagePtr ? emu_read32(e, l->storagePtr) : l->storage;
 }
 
-#define BOX_X 4
-#define BOX_Y 36
-#define CELL 19
+#define BOX_X 6
+#define BOX_Y (TOP + 34)
+#define BOX_CW 46
+#define BOX_CH 40
 
 static void page_box(Emu* e, const Layout* l, uint32_t* key) {
 	uint32_t st = storage_of(e, l);
@@ -741,51 +997,55 @@ static void page_box(Emu* e, const Layout* l, uint32_t* key) {
 		if (!boxed_decode(raw, &mons[i])) mons[i].species = -1;
 		if (mons[i].species > 0) ++count;
 	}
-	*key = (*key ^ (uint32_t) (ui.box | ui.boxPick << 8)) * 16777619u;
+	*key = (*key ^ (uint32_t) (ui.box | ui.boxPick << 8 | animFrame << 16)) * 16777619u;
 	if (!px) return;
-	/* the box's name bar: ◀ 箱子 N ▶, how many */
-	panel(4, 19, 116, 15, navy, RGB(80, 104, 168));
+	/* the box's bar: ◀ 箱子 N ▶, how many */
+	panel(4, TOP + 3, 280, 30, navy, RGB(64, 128, 168));
 	char name[24] = "箱子 ";
 	number(name + strlen(name), ui.box + 1);
-	text(62 - text_width(name) / 2, 20, name, RGB(248, 248, 248), RGB(40, 56, 96));
+	text_mid(120, TOP + 6, name, white, RGB(32, 64, 96), 2);
 	for (int d = 0; d < 2; ++d) {
-		/* the arrows: triangles pointing out */
-		int ax = d ? 112 : 8;
-		for (int i = 0; i < 4; ++i) fill(d ? ax + 3 - i : ax + i, 26 - i, d ? ax + 3 - i : ax + i, 26 + i, RGB(248, 248, 248));
+		int ax = d ? 252 : 8;
+		for (int i = 0; i < 8; ++i) fill(d ? ax + 18 - i : ax + 6 + i, TOP + 18 - i, d ? ax + 18 - i : ax + 6 + i, TOP + 18 + i, white);
 	}
 	char cnt[12];
 	number(cnt, count);
 	strcat(cnt, "/30");
 	/* the grid: 6 by 5 */
-	panel(BOX_X - 2, BOX_Y - 2, 6 * CELL + 4, 5 * CELL + 4, navy, RGB(232, 232, 216));
+	panel(BOX_X - 2, BOX_Y - 2, 6 * BOX_CW + 4, 5 * BOX_CH + 4, navy, RGB(220, 228, 220));
 	for (int i = 0; i < 30; ++i) {
-		int x = BOX_X + (i % 6) * CELL, y = BOX_Y + (i / 6) * CELL;
-		if (i == ui.boxPick) fill(x, y, x + CELL - 2, y + CELL - 2, RGB(248, 200, 120));
-		if (mons[i].species > 0) icon_draw(e, mons[i].egg ? 412 : mons[i].species, x + 1, y + 1, true, false);
+		int x = BOX_X + (i % 6) * BOX_CW, y = BOX_Y + (i / 6) * BOX_CH;
+		if (i == ui.boxPick) fill(x + 1, y + 1, x + BOX_CW - 2, y + BOX_CH - 2, RGB(248, 200, 120));
+		if (mons[i].species > 0) icon_draw(e, mons[i].egg ? 412 : mons[i].species, x + 7, y + 3, 1, i == ui.boxPick ? animFrame : 0, 0);
 	}
-	text(BOX_X, BOX_Y + 5 * CELL + 4, cnt, ink, soft);
-	/* the one picked: its icon, name, level */
-	panel(124, 19, 112, 138, navy, cream);
+	text_right(276 - 24, TOP + 11, cnt, RGB(208, 224, 240), 0, 1);
+	/* the one picked: icon, name, gender, level, item */
+	panel(288, TOP + 3, 188, 242, navy, cream);
 	const Boxed* m = &mons[ui.boxPick];
 	if (m->species <= 0) {
-		text(180 - text_width("空") / 2, 80, "空", RGB(144, 144, 152), 0);
+		text_mid(382, TOP + 110, "空", RGB(144, 144, 152), 0, 2);
 		return;
 	}
-	icon_draw(e, m->egg ? 412 : m->species, 164, 30, false, false);
-	const char* nm = m->egg ? "蛋" : species_name(e, m->species);
-	text_fit(180 - text_width(nm) / 2, 68, nm, ink, soft, 104);
-	if (!m->egg) {
-		int lv = level_of(e, m->species, m->exp);
-		if (lv) level(180 + text_width("Lv100") / 2, 84, lv);
+	icon_draw(e, m->egg ? 412 : m->species, 350, TOP + 20, 2, animFrame, 0);
+	if (m->egg) {
+		text_mid(382, TOP + 100, "蛋", ink, soft, 2);
+		return;
 	}
+	const char* nm = species_name(e, m->species);
+	int w = text_width(nm, 2) + 26;
+	name_and_gender(e, 382 - w / 2, TOP + 96, nm, m->species, m->pid, 180);
+	int lv = level_of(e, m->species, m->exp);
+	if (lv) {
+		char s[8] = "Lv";
+		number(s + 2, lv);
+		text_mid(382, TOP + 128, s, ink, soft, 2);
+	}
+	if (m->item > 0 && m->item < POKE_ITEMS && pokeItemNames[m->item][0]) text_mid(382, TOP + 164, pokeItemNames[m->item], RGB(112, 104, 96), 0, 1);
 }
 
-/* ------------------------------------------------------------------ the bag */
+/* ------------------------------------------------------------------ 背包 */
 
-static int pocket_x(int i) {
-	static const int xs[5] = { 4, 34, 76, 106, 148 };
-	return xs[i];
-}
+static const int pocketX[5] = { 4, 64, 148, 208, 292 };
 
 static void page_bag(Emu* e, const Layout* l, uint32_t* key) {
 	uint32_t sb1 = sb1_of(e, l), k = key_of(e, l) & 0xFFFF;
@@ -801,49 +1061,50 @@ static void page_bag(Emu* e, const Layout* l, uint32_t* key) {
 	*key = (*key ^ (uint32_t) (ui.pocket | ui.bagStart << 4)) * 16777619u;
 	if (!px) return;
 	for (int i = 0; i < 5; ++i) {
-		int x = pocket_x(i), w = text_width(pocketNames[i]) + 6;
+		int x = pocketX[i], w = text_width(pocketNames[i], 2) + 12;
 		bool on = ui.pocket == i;
-		panel(x, 19, w, 14, on ? RGB(232, 96, 64) : navy, on ? cream : RGB(80, 104, 168));
-		text(x + 3, 20, pocketNames[i], on ? ink : RGB(248, 248, 248), on ? soft : RGB(40, 56, 96));
+		panel(x, TOP + 3, w, 32, on ? orange : navy, on ? cream : RGB(80, 104, 168));
+		text(x + 6, TOP + 7, pocketNames[i], on ? ink : white, on ? soft : RGB(40, 56, 96), 2);
 	}
-	enum { ROWS = 9, PER = ROWS * 2 };
+	enum { ROWS = 7, PER = ROWS * 2 };
 	if (ui.bagStart >= n) ui.bagStart = 0;
-	panel(4, 35, 232, 122, navy, cream);
+	panel(4, TOP + 38, 472, 206, navy, cream);
 	if (!n) {
-		text(W / 2 - text_width("空") / 2, 88, "空", RGB(144, 144, 152), 0);
+		text_mid(HW / 2, TOP + 128, "空", RGB(144, 144, 152), 0, 2);
 		return;
 	}
 	int shown = n - ui.bagStart > PER ? PER - 1 : n - ui.bagStart;
+	bool keyItem = ui.pocket == 4;
 	for (int j = 0; j < shown; ++j) {
-		int i = ui.bagStart + j, x = 8 + (j / ROWS) * 114, y = 37 + (j % ROWS) * 13;
+		int i = ui.bagStart + j, x = 12 + (j / ROWS) * 234, y = TOP + 44 + (j % ROWS) * 28;
 		const char* name = ids[i] < POKE_ITEMS && pokeItemNames[ids[i]][0] ? pokeItemNames[ids[i]] : "？？？";
 		char q[12] = "×";
 		number(q + strlen(q), qty[i]);
-		bool keyItem = ui.pocket == 4;
-		int qw = keyItem ? 0 : text_width(q) + 4;
-		text_fit(x, y, name, ink, soft, 110 - qw);
-		if (!keyItem) text(x + 108 - text_width(q), y, q, ink, soft);
+		int qw = keyItem ? 0 : text_width(q, 2) + 8;
+		text_fit(x, y, name, ink, soft, 2, 222 - qw);
+		if (!keyItem) text_right(x + 222, y, q, ink, soft, 2);
 	}
 	if (shown < n - ui.bagStart) {
 		char more[24] = "还有";
 		number(more + strlen(more), n - ui.bagStart - shown);
 		strcat(more, "个…");
-		text(8 + 114, 37 + (ROWS - 1) * 13, more, RGB(232, 96, 64), soft);
+		text(12 + 234, TOP + 44 + (ROWS - 1) * 28, more, orange, soft, 2);
 	}
 }
 
-/* ------------------------------------------------------------------ a move tapped */
+/* ------------------------------------------------------------------ a tap in a battle */
 
-/* Played as the player would — on the action menu FIGHT chosen (its cursor put on it) and A, on the
- * move menu the move's place and A (in a double battle, one more A: the target the game offers) —
- * only while the game is on one of those menus for that Pokémon; anything else (a message, an
- * animation) and it waits, given up after three seconds. */
+/* Played as the player would on the game's own menus — a move: on the action menu FIGHT chosen (its
+ * cursor put on it) and A, on the move menu the move's place and A (in a double battle, one more A: the
+ * target the game offers); 背包 / 宝可梦 / 逃跑: the action menu's cursor put on it and A — only while the game
+ * is on one of those menus for that Pokémon; anything else (a message, an animation) and it waits, given up
+ * after three seconds. */
 static struct {
-	int move;    /* -1: none */
+	int move;    /* 0-3 a move, 4-6 the action menu's BAG / POKéMON / RUN; -1: none */
 	int battler; /* 0 or 2 */
 	int frames;  /* since the tap */
 	int press;   /* frames left of an A being pressed (then let go) */
-	int stage;   /* 0: menus; 1: the move's A pressed; 2: the target's A pressed (doubles) */
+	int stage;   /* 0: menus; 1: the last A pressed; 2: the target's A (doubles) */
 	int wait;    /* frames before the target's A */
 	bool doubles;
 } act = { -1, 0, 0, 0, 0, 0, false };
@@ -873,7 +1134,7 @@ static void battle_act(Emu* e, const Layout* l, const Battler* bat) {
 		/* A down three frames, up three */
 		injected = act.press > 3 ? K_A : 0;
 		if (--act.press == 0) {
-			if (act.stage == 1 && act.doubles) act.stage = 2, act.wait = 15; /* (the target menu: its A after a moment) */
+			if (act.stage == 1 && act.doubles && act.move < 4) act.stage = 2, act.wait = 15; /* (the target menu: its A after a moment) */
 			else if (act.stage >= 1) act.move = -1;
 		}
 		return;
@@ -884,9 +1145,19 @@ static void battle_act(Emu* e, const Layout* l, const Battler* bat) {
 	}
 	uint32_t f = emu_read32(e, l->controller + act.battler * 4);
 	if (f == rom.actionFn && act.stage == 0) {
-		emu_write8(e, l->actionCursor + act.battler, 0);
-		act.press = 6, injected = K_A;
+		if (act.move >= 4) {
+			emu_write8(e, l->actionCursor + act.battler, (uint8_t) (act.move - 3));
+			act.press = 6, act.stage = 1, injected = K_A;
+		} else {
+			emu_write8(e, l->actionCursor + act.battler, 0);
+			act.press = 6, injected = K_A;
+		}
 	} else if (f == rom.moveFn && act.stage == 0) {
+		if (act.move >= 4) {
+			/* (on the move menu: back to the action menu first) */
+			act.press = 0, injected = K_B;
+			return;
+		}
 		const Battler* me = &bat[act.battler];
 		if (!me->moves[act.move] || !me->pp[act.move]) {
 			act.move = -1;
@@ -897,48 +1168,81 @@ static void battle_act(Emu* e, const Layout* l, const Battler* bat) {
 	}
 }
 
-/* a tap: on a page's tab, a pocket (again: its next items), a move, a box's place or arrow */
-static void take_tap(const Battler* bat, int mine) {
+/* a tap: on a page's tab, a move or action, a box's place or arrow, the Pokédex, a pocket */
+static void take_tap(Emu* e, const Battler* bat, int mine) {
 	if (!ui.tapped) return;
 	ui.tapped = false;
 	int x = ui.tapX, y = ui.tapY;
-	if (y < 17) {
-		for (int i = 0; i < N_PAGES; ++i)
-			if (x >= tab_x(i) && x < tab_x(i) + TAB_W && !(i == PAGE_BATTLE && !ui.inBattle)) ui.page = i;
+	if (y >= TABS_Y) {
+		int i = (x - 5) / TAB_W;
+		if (i >= 0 && i < N_PAGES && !(i == PAGE_BATTLE && !ui.inBattle)) ui.page = i;
 		return;
 	}
-	if (ui.page == PAGE_BATTLE && y >= 99 && y < 158 && rom.actionFn && rom.moveFn && act.move < 0) {
-		int i = (y - 99) / 30 * 2 + (x >= 118);
+	if (ui.page == PAGE_BATTLE && y >= MOVE_Y && rom.actionFn && rom.moveFn && act.move < 0) {
+		if (x >= ACT_X) {
+			int i = (y - MOVE_Y) / 35;
+			if (i < 3) act = (typeof(act)) { 4 + i, mine, 0, 0, 0, 0, act.doubles };
+			return;
+		}
+		int i = (y - MOVE_Y) / (MOVE_H + 2) * 2 + (x >= 4 + MOVE_W + 2);
 		const Battler* me = &bat[mine];
 		if (i < 4 && me->moves[i] && me->pp[i]) act = (typeof(act)) { i, mine, 0, 0, 0, 0, act.doubles };
 		return;
 	}
-	if (ui.page == PAGE_BOX) {
-		if (y >= 19 && y < 34 && x < 120) {
-			ui.box = (ui.box + (x < 62 ? 13 : 1)) % 14;
+	if (ui.page == PAGE_DEX) {
+		if (y < TOP + 34) {
+			if (x >= 444) ui.dexPage++, ui.dexPick = 0;
+			else if (x >= 336) ui.dexPage = ui.dexPage > 0 ? ui.dexPage - 1 : (DEX_N - 1) / DEX_PER, ui.dexPick = 0;
+			else ui.dexPick = 0;
 			return;
 		}
-		int c = (x - BOX_X) / CELL, r = (y - BOX_Y) / CELL;
+		int c = (x - 6) / DEX_CW, r = (y - DEX_Y) / DEX_CH;
+		if (x >= 6 && y >= DEX_Y && c < DEX_COLS && r < DEX_ROWS) {
+			int nat = ui.dexPage * DEX_PER + r * DEX_COLS + c + 1;
+			ui.dexPick = nat <= DEX_N && nat != ui.dexPick ? nat : 0;
+		}
+		(void) e;
+		return;
+	}
+	if (ui.page == PAGE_BOX) {
+		if (y < TOP + 34 && x < 284) {
+			ui.box = (ui.box + (x < 144 ? 13 : 1)) % 14;
+			return;
+		}
+		int c = (x - BOX_X) / BOX_CW, r = (y - BOX_Y) / BOX_CH;
 		if (x >= BOX_X && y >= BOX_Y && c < 6 && r < 5) ui.boxPick = r * 6 + c;
 		return;
 	}
-	if (ui.page == PAGE_BAG && y >= 19 && y < 34) {
-		for (int i = 4; i >= 0; --i)
-			if (x >= pocket_x(i)) {
-				if (ui.pocket == i) ui.bagStart += 17;
-				else ui.pocket = i, ui.bagStart = 0;
-				return;
-			}
+	if (ui.page == PAGE_BAG) {
+		if (y < TOP + 36) {
+			for (int i = 4; i >= 0; --i)
+				if (x >= pocketX[i]) {
+					if (ui.pocket == i) ui.bagStart += 13;
+					else ui.pocket = i, ui.bagStart = 0;
+					return;
+				}
+		}
+		/* a tap on the list: its next items */
+		ui.bagStart += 13;
 	}
-	/* a tap on the list's "还有…": its next items */
-	if (ui.page == PAGE_BAG && y >= 35) ui.bagStart += 17;
+}
+
+/* ------------------------------------------------------------------ the page */
+
+static uint32_t hiOut[HW * HH];
+static bool hiValid;
+
+const uint32_t* poke_page_hi(void) {
+	return hiValid ? hiOut : NULL;
 }
 
 const uint32_t* poke_live_view(Emu* e, const char* romPath) {
 	(void) romPath;
-	static uint32_t out[W * H];
+	static uint32_t lo[240 * 160];
 	static uint32_t lastKey;
 	static bool have;
+	static unsigned frames;
+	hiValid = false;
 	if (!poke_supported(e->gameCode)) return NULL;
 	rom_scan(e);
 	const Layout* l = rom.lay;
@@ -949,7 +1253,14 @@ const uint32_t* poke_live_view(Emu* e, const char* romPath) {
 	uint32_t key = 2166136261u;
 	int n = party_read(e, l->party, count, mons, &key);
 	/* a party being written (a switch, a new Pokémon): the last picture meanwhile; none yet: the logo */
-	if (n <= 0) return n < 0 && have ? out : (have = false, NULL);
+	if (n <= 0) {
+		if (n < 0 && have) {
+			hiValid = true;
+			return lo;
+		}
+		return have = false, NULL;
+	}
+	animFrame = (++frames / 20) & 1;
 	/* in a battle: its page, and back to the page before once it's over */
 	bool inBattle = emu_read8(e, l->inBattle) & 2;
 	Battler bat[4];
@@ -957,6 +1268,7 @@ const uint32_t* poke_live_view(Emu* e, const char* romPath) {
 	int nBat = 2, mine = 0;
 	Mon team[6];
 	int nTeam = 0;
+	bool canAct = false;
 	if (inBattle) {
 		nBat = emu_read8(e, l->battlers) == 4 ? 4 : 2;
 		for (int b = 0; b < nBat && inBattle; ++b)
@@ -965,7 +1277,7 @@ const uint32_t* poke_live_view(Emu* e, const char* romPath) {
 		if (nTeam < 0) nTeam = 0;
 		if (rom.actionFn) {
 			int b = menu_battler(e, l, nBat);
-			if (b >= 0) mine = b;
+			if (b >= 0) mine = b, canAct = true;
 		}
 	}
 	act.doubles = nBat == 4;
@@ -974,25 +1286,33 @@ const uint32_t* poke_live_view(Emu* e, const char* romPath) {
 		else if (ui.page == PAGE_BATTLE) ui.page = ui.pageBefore == PAGE_BATTLE ? PAGE_PARTY : ui.pageBefore;
 		ui.inBattle = inBattle;
 	}
-	take_tap(bat, mine);
+	take_tap(e, bat, mine);
 	if (inBattle) battle_act(e, l, bat);
 	else injected = 0, act.move = -1;
-	uint32_t sb1 = sb1_of(e, l);
+	uint32_t sb1 = sb1_of(e, l), sb2 = sb2_of(e, l);
 	key = (key ^ emu_read32(e, sb1 + l->moneyOff)) * 16777619u;
 	key = (key ^ (uint32_t) badges_of(e, l)) * 16777619u;
-	key = (key ^ (uint32_t) (ui.page | ui.inBattle << 4 | mine << 5 | nBat << 8)) * 16777619u;
+	if (sb2 >> 24 == 0x02) key = (key ^ (uint32_t) (emu_read16(e, sb2 + 0x0E) << 8 | emu_read8(e, sb2 + 0x10))) * 16777619u;
+	key = (key ^ (uint32_t) (ui.page | ui.inBattle << 4 | mine << 5 | nBat << 8 | canAct << 12 | animFrame << 13)) * 16777619u;
 	/* (a page's contents in the key too: read without drawing first) */
 	px = NULL;
 	if (ui.page == PAGE_BAG) page_bag(e, l, &key);
 	if (ui.page == PAGE_BOX) page_box(e, l, &key);
-	if (have && key == lastKey) return out;
-	px = out;
+	if (ui.page == PAGE_DEX) page_dex(e, l, &key);
+	if (have && key == lastKey) {
+		hiValid = true;
+		return lo;
+	}
+	px = hiOut;
 	ground();
-	header(e, l);
+	top_bar(e, l);
 	uint32_t k2 = 0;
 	switch (ui.page) {
 	case PAGE_BATTLE:
-		page_battle(e, bat, nBat, mine, team, nTeam);
+		page_battle(e, bat, nBat, mine, team, nTeam, canAct);
+		break;
+	case PAGE_DEX:
+		page_dex(e, l, &k2);
 		break;
 	case PAGE_BOX:
 		page_box(e, l, &k2);
@@ -1003,7 +1323,12 @@ const uint32_t* poke_live_view(Emu* e, const char* romPath) {
 	default:
 		for (int i = 0; i < n; ++i) party_card(e, &mons[i], i);
 	}
+	tabs();
+	/* (240 × 160 for a frontend that takes the second screen at the GBA's size: every other pixel) */
+	for (int y = 0; y < 160; ++y)
+		for (int x = 0; x < 240; ++x) lo[y * 240 + x] = hiOut[(y * 2) * HW + x * 2];
 	lastKey = key;
 	have = true;
-	return out;
+	hiValid = true;
+	return lo;
 }

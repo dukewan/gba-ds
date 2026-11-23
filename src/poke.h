@@ -38,10 +38,14 @@ extern const PokeGlyph pokeGlyphs[];
 /* Whether the game (its 4-letter code) is one of the Gen 3 games (or a hack under its code):
  * the pages may be drawn, and touches are taken. */
 bool poke_supported(const char* gameCode);
-/* A touch on the second screen this frame, in its pixels (0-239, 0-159); down: pressed. */
+/* A touch on the second screen this frame, in the 480 × 320 page's pixels; down: pressed. */
 void poke_touch(int x, int y, bool down);
 /* Keys the pages press for the player this frame (a move tapped in a battle), ORed into theirs. */
 uint32_t poke_keys(void);
+/* The page at twice the GBA's size, 480 × 320 (ABGR8888), as poke_live_view last drew it this frame; NULL
+ * when there's none (the logo). poke_live_view's own picture is it at 240 × 160. Taps (poke_touch) are in
+ * its pixels. */
+const uint32_t* poke_page_hi(void);
 /* MapProfile.liveView: the page (240x160, ABGR8888) while the player has a
  * party, NULL otherwise (the title, a new game: the logo). */
 const uint32_t* poke_live_view(Emu* e, const char* rom);

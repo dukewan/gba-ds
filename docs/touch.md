@@ -10,6 +10,8 @@ Touches are read only for the games below; any other game's taps stay the fronte
   The Minish Cap, Final Fantasy Tactics Advance, Mario & Luigi, MOTHER 3, Summon Night 1 and 2, Tactics
   Ogre, Banjo-Kazooie, Zoids, Rebelstar): a tap shows the next page, held there half a minute; then they
   turn on from it.
+- **TOUCH-1b One picture.** Any other game with a second screen of its own (a map, a status screen): a
+  tap takes it again at once (a map that has fallen behind the game).
 - **TOUCH-2 The Minish Cap.** With 只显示地图 (the default) the map stays, and the other pages are still
   taken: a tap turns to them. On the Items page a tap on an item puts it on B, as B on it in the pause
   screen does (on A before: A gets what B had); the page is taken again so its A / B marks follow. Only

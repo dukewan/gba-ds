@@ -29,6 +29,7 @@ bool lr_second_paged(void);
 void lr_second_tap(void);
 int lr_second_page(void); /* the page shown now (-1: none) */
 void lr_second_refresh(void);
+bool lr_second_any(void);
 #include "../src/profiles.h"
 
 #include <dlfcn.h>
@@ -58,6 +59,10 @@ static char romPath[4096];
 static void* savedata;
 static bool saveAttached;
 static uint32_t out[OUT_W * OUT_H];
+/* (游典) The Pokémon games: the frame at twice the size, 480 × 640 — the game at 2×, the second screen the
+ * pages drawn at that size (src/poke.c), sharper than at the GBA's own (the owner: PokeDaisy's are) */
+static bool hires;
+static uint32_t outHi[OUT_W * 2 * OUT_H * 2];
 static int16_t audioBuf[4096 * 2];
 
 /* GBA DS's game (src/game.c, libretro/lr_game.inc): its emulator, its second screen */
@@ -170,10 +175,10 @@ void retro_get_system_info(struct retro_system_info* info) {
 
 void retro_get_system_av_info(struct retro_system_av_info* info) {
 	memset(info, 0, sizeof(*info));
-	info->geometry.base_width = OUT_W;
-	info->geometry.base_height = OUT_H;
-	info->geometry.max_width = OUT_W;
-	info->geometry.max_height = OUT_H;
+	info->geometry.base_width = hires ? OUT_W * 2 : OUT_W;
+	info->geometry.base_height = hires ? OUT_H * 2 : OUT_H;
+	info->geometry.max_width = OUT_W * 2;
+	info->geometry.max_height = OUT_H * 2;
 	info->geometry.aspect_ratio = (float) OUT_W / OUT_H;
 	info->timing.fps = GBA_FPS;
 	info->timing.sample_rate = loaded ? emu_audio_rate(&emu) : 32768;
@@ -208,6 +213,7 @@ bool retro_load_game(const struct retro_game_info* game) {
 		return false;
 	}
 	loaded = true;
+	hires = poke_supported(emu.gameCode);
 	saveAttached = false;
 	int kind = lr_kind();
 	const MapProfile* p = profile_find(emu.gameCode);
@@ -315,17 +321,19 @@ void retro_run(void) {
 	 * second-screen pixel each (polled only for them, so other games' taps stay the frontend's) */
 	/* (a game whose second screen turns pages, or has its own taps: GBA DS's touch.c) */
 	bool pokemon = poke_supported(emu.gameCode);
-	if (pokemon || lr_second_paged() || touch_wanted(&emu)) {
+	if (pokemon || lr_second_paged() || touch_wanted(&emu) || lr_second_any()) {
 		static bool wasDown;
 		bool down = input_state_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_PRESSED);
 		int px = input_state_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_X);
 		int py = input_state_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_Y);
 		int fx = (px + 0x7FFF) * GBA_W / 0xFFFF, fy = (py + 0x7FFF) * (2 * GBA_H) / 0xFFFF - GBA_H;
 		down = down && fy >= 0;
-		if (pokemon) poke_touch(fx, fy, down);
+		/* (the Pokémon pages take them in their own 480 × 320 pixels) */
+		if (pokemon) poke_touch((px + 0x7FFF) * GBA_W * 2 / 0xFFFF, (py + 0x7FFF) * (4 * GBA_H) / 0xFFFF - 2 * GBA_H, down);
 		else if (down && !wasDown) {
 			if (touch_tap(&emu, lr_second_page(), fx, fy)) lr_second_refresh();
-			else lr_second_tap();
+			else if (lr_second_paged()) lr_second_tap();
+			else lr_second_refresh(); /* (one picture: taken again now — a map that's fallen behind) */
 		}
 		wasDown = down;
 	}
@@ -346,7 +354,24 @@ void retro_run(void) {
 		place(px, w, h, GBA_H, xrgb(ground));
 	}
 	if (dimmed) for (int i = GBA_W * GBA_H; i < OUT_W * OUT_H; ++i) out[i] = dim(out[i], 120);
-	video_cb(out, OUT_W, OUT_H, OUT_W * sizeof(uint32_t));
+	if (hires) {
+		/* each pixel twice across and down; the lower half the pages at their own size when there's one */
+		const uint32_t* page = poke_page_hi();
+		int rows = page ? GBA_H : OUT_H;
+		for (int y = 0; y < rows; ++y) {
+			uint32_t* o = outHi + (y * 2) * OUT_W * 2;
+			const uint32_t* in = out + y * OUT_W;
+			for (int x = 0; x < OUT_W; ++x) o[x * 2] = o[x * 2 + 1] = in[x];
+			memcpy(o + OUT_W * 2, o, OUT_W * 2 * sizeof(uint32_t));
+		}
+		if (page) {
+			uint32_t* o = outHi + GBA_H * 2 * OUT_W * 2;
+			for (int i = 0; i < GBA_W * 2 * GBA_H * 2; ++i) o[i] = dimmed ? dim(xrgb(page[i]), 120) : xrgb(page[i]);
+		}
+		video_cb(outHi, OUT_W * 2, OUT_H * 2, OUT_W * 2 * sizeof(uint32_t));
+	} else {
+		video_cb(out, OUT_W, OUT_H, OUT_W * sizeof(uint32_t));
+	}
 
 	/* The game's own sound rate, told when it changes (a game sets it as it starts: Mario Kart's 65536 after
 	 * the 32768 it boots at), as mGBA's libretro core does (its _audioRateChanged): a frontend playing 65536
