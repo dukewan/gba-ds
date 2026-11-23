@@ -30,6 +30,7 @@ void lr_second_tap(void);
 int lr_second_page(void); /* the page shown now (-1: none) */
 void lr_second_refresh(void);
 bool lr_second_any(void);
+void lr_second_show(int page); /* (游典) that page, held as a tap holds one */
 #include "../src/profiles.h"
 
 #include <dlfcn.h>
@@ -331,8 +332,10 @@ void retro_run(void) {
 		/* (the Pokémon pages take them in their own 480 × 320 pixels) */
 		if (pokemon) poke_touch((px + 0x7FFF) * GBA_W * 2 / 0xFFFF, (py + 0x7FFF) * (4 * GBA_H) / 0xFFFF - 2 * GBA_H, down);
 		else if (down && !wasDown) {
-			if (touch_tap(&emu, lr_second_page(), fx, fy)) lr_second_refresh();
-			else if (lr_second_paged()) lr_second_tap();
+			if (touch_tap(&emu, lr_second_page(), fx, fy)) {
+				if (touch_page() >= 0) lr_second_show(touch_page());
+				else lr_second_refresh();
+			} else if (lr_second_paged()) lr_second_tap();
 			else lr_second_refresh(); /* (one picture: taken again now — a map that's fallen behind) */
 		}
 		wasDown = down;

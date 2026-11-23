@@ -13,6 +13,9 @@ bool touch_wanted(Emu* e);
 /* A tap at (x, y) on the second screen (its pixels) while page `page` of its pictures shows: true if
  * the game took it (else the page turns, if there are pages). */
 bool touch_tap(Emu* e, int page, int x, int y);
+/* After a tap taken: the page it asks to show (Golden Sun's party row), or -1 — then the game was changed
+ * and the pages are to be taken again (or the tap did nothing). */
+int touch_page(void);
 /* Keys pressed for the player this frame (none yet: taps act on the game's memory). */
 uint32_t touch_keys(void);
 

@@ -256,7 +256,10 @@ int main(int argc, char** argv) {
 			/* tap2 PAGE X,Y: a tap on the second screen's page PAGE (touch.c) */
 			int tx = 0, ty = 0;
 			sscanf(a2, "%d,%d", &tx, &ty);
-			printf("tap2: %s\n", touch_tap(&emu, atoi(a1), tx, ty) ? "taken" : "not taken");
+			bool took = touch_tap(&emu, atoi(a1), tx, ty);
+			printf("tap2: %s", took ? "taken" : "not taken");
+			if (took && touch_page() >= 0) printf(", page %d asked", touch_page());
+			printf("\n");
 		} else if (!strcmp(cmd, "pokerun")) {
 			/* pokerun N: N frames as the player runs them, the live view drawn each and its keys pressed */
 			const MapProfile* lp = profile_find(emu.gameCode);

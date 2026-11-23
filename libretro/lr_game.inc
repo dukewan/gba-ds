@@ -291,6 +291,14 @@ void lr_second_tap(void) {
 	upload_map_frame(pageHeld);
 	fprintf(stderr, "frame %llu: second screen tapped, page %d of %d\n", (unsigned long long) frameCount, pageHeld + 1, mapRes.nFrames);
 }
+/* (游典) a tap asked for page `page` (Golden Sun's party row): shown and held as a tap's next page is */
+void lr_second_show(int page) {
+	if (!lr_second_paged() || page < 0 || page >= mapRes.nFrames) return;
+	pageHeld = page;
+	pageHeldUntil = frameCount + 30 * 60;
+	upload_map_frame(pageHeld);
+	fprintf(stderr, "frame %llu: second screen tapped, page %d of %d\n", (unsigned long long) frameCount, pageHeld + 1, mapRes.nFrames);
+}
 int lr_second_page(void) {
 	return lr_second_paged() ? map_anim_index() : (mapShownIdx >= 0 ? 0 : -1);
 }

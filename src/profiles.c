@@ -3323,6 +3323,22 @@ static void gs_no_prompt_box(uint32_t* px, int w) {
 	}
 }
 
+/* (游典) the walking Status's pages as last taken (0: a battle's Status, or none yet), for a tap on its
+ * party row (touch_gs.c) */
+static volatile int gsStatusPages;
+int profile_gs_status_pages(void) {
+	return gsStatusPages;
+}
+/* who's in the party, a bit per character (both games, every release: Golden Sun's four, The Lost Age's
+ * eight) — the Status has a page for each. Read as a bound on the pages: the round to the first again is
+ * told by its stats panel, where the Djinn (The Lost Age's, at least) bob, so a party of fewer than eight
+ * with Djinn went round again to eight pages. */
+#define GS_PARTY_BITS 0x02000040
+static int gs_party_count(Emu* s) {
+	int n = __builtin_popcount(emu_read8(s, GS_PARTY_BITS));
+	return n >= 1 && n <= GS_PAGES ? n : GS_PAGES;
+}
+
 static const char* gs_compose(Emu* s, const void* state, uint32_t* const* out, int* nOut, int* step, int w, int h) {
 	static uint32_t page[GS_PAGES][GBA_W * GBA_H];
 	int max = *nOut < GS_PAGES ? *nOut : GS_PAGES;
@@ -3330,6 +3346,7 @@ static const char* gs_compose(Emu* s, const void* state, uint32_t* const* out, i
 	*step = 300; /* 5 seconds a party member */
 	if (!emu_state_load(s, state)) return "state load failed";
 	emu_frame(s, 0);
+	if (max > gs_party_count(s)) max = gs_party_count(s);
 	if (emu_read8(s, GS_INPUT) == 5) {
 		/* a battle, the player choosing: the battle's Status of the one choosing (GS-7) */
 		int who = emu_read8(s, GS_WHO);
@@ -3350,6 +3367,7 @@ static const char* gs_compose(Emu* s, const void* state, uint32_t* const* out, i
 		for (int y = 0; y < h && y < GBA_H; ++y) memcpy(&out[0][y * w], &s->fb[y * GBA_W], (w < GBA_W ? w : GBA_W) * sizeof(uint32_t));
 		gs_no_help(out[0], w);
 		*nOut = 1;
+		gsStatusPages = 0;
 		return NULL;
 	}
 	if (emu_read8(s, GS_BSCENE + GS_GER(s)) != 0x5F) return "a battle playing out"; /* (the logo: GS-8) */
@@ -3391,6 +3409,7 @@ static const char* gs_compose(Emu* s, const void* state, uint32_t* const* out, i
 		for (int y = 0; y < h && y < GBA_H; ++y) memcpy(&out[k][y * w], &page[k][y * GBA_W], (w < GBA_W ? w : GBA_W) * sizeof(uint32_t));
 		gs_no_prompt_box(out[k], w);
 	}
+	gsStatusPages = n;
 	return NULL;
 }
 
@@ -3505,6 +3524,7 @@ static const char* gs2_compose(Emu* s, const void* state, uint32_t* const* out, 
 	emu_frame(s, 0);
 	uint16_t map = emu_read16(s, a->map);
 	if (map == 0) return "the title";
+	if (max > gs_party_count(s)) max = gs_party_count(s);
 	if (map == GS2_BATTLE) {
 		if (emu_read8(s, a->input) != 5) return "a battle playing out"; /* (the logo: GS2-8) */
 		/* the player choosing: the battle's Status of the one choosing (GS2-7),
@@ -3534,6 +3554,7 @@ static const char* gs2_compose(Emu* s, const void* state, uint32_t* const* out, 
 		gs_no_help(out[0], w);
 		gs2_black_corners(out[0], w, false);
 		*nOut = 1;
+		gsStatusPages = 0;
 		return NULL;
 	}
 	/* back to walking about first (from the menu or one of its screens,
@@ -3573,6 +3594,7 @@ static const char* gs2_compose(Emu* s, const void* state, uint32_t* const* out, 
 		gs_no_prompt_box(out[k], w);
 		gs2_black_corners(out[k], w, true);
 	}
+	gsStatusPages = n;
 	return NULL;
 }
 
