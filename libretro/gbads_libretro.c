@@ -340,7 +340,7 @@ void retro_run(void) {
 		}
 		wasDown = down;
 	}
-	lr_frame(read_keys() | (poke_supported(emu.gameCode) ? poke_keys() : touch_keys()));
+	lr_frame(poke_supported(emu.gameCode) ? poke_player_keys(read_keys()) | poke_keys() : read_keys() | touch_keys());
 
 	bool dimGame = false;
 	const uint32_t* game = lr_game_picture(&dimGame);

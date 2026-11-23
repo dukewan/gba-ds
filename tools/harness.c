@@ -268,6 +268,14 @@ int main(int argc, char** argv) {
 				if (lp && lp->liveView) lp->liveView(&emu, argv[1]);
 				run(poke_keys(), 1);
 			}
+		} else if (!strcmp(cmd, "pokehold")) {
+			/* pokehold KEYS N: N frames with the player holding KEYS, as the core passes them (poke_player_keys) */
+			const MapProfile* lp = profile_find(emu.gameCode);
+			uint32_t k = parse_keys(a1);
+			for (int i = 0, nf = atoi(a2); i < nf; ++i) {
+				if (lp && lp->liveView) lp->liveView(&emu, argv[1]);
+				run(poke_player_keys(k) | poke_keys(), 1);
+			}
 		} else if (!strcmp(cmd, "live")) {
 			/* live NAME: the profile's own live picture now (liveView), or "no live view" */
 			const MapProfile* lp = profile_find(emu.gameCode);

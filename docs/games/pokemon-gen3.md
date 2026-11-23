@@ -42,7 +42,8 @@ LeafGreen / Emerald, European ones): no profile.
   an animation) the tap waits for the menu, and is dropped after three seconds; a move without PP
   does nothing. In a double battle, after the move the target the game offers is taken (A).
 - **PK-8 The bag.** Pockets along the top (道具, 精灵球, 树果, 学习器, 重要物品), each one's items with
-  how many; past 17, 还有…个 — a tap on the list or the pocket shows the next ones.
+  how many; past 17, 还有…个 — a tap on the list or the pocket shows the next ones. While the bag page is shown, L and R
+  turn its pockets (R the next, L the one before) and the game doesn't get them (the owner, 11-23).
 - **PK-10 The PC's boxes.** The box the game has open first, ◀ ▶ for the others; its 30 places
   (small icons), how many are filled; a tap on a place shows that Pokémon — icon, name, level (from
   its experience and its species' growth rate in the ROM; none where the ROM has no base stats).
@@ -77,5 +78,7 @@ FireRed, Emerald and Ruby (AXVJ) to the first Pokémon and into its first battle
 (`live NAME` writes the page, `touch X Y` taps it, `pokerun N` runs frames with its keys), an item
 and badges put in and seen in each game's own bag and trainer card; FireRed on the AYN Thor in 游典
 (the tabs, a move tapped from the action menu). The layouts' RAM: found by diffing dumps around
-each menu; the battle menus' functions by their first 32 bytes in the ROM (LeafGreen's move menu
-where FireRed's lies from its action menu).
+each menu; the battle menus' functions by their first 32 bytes in the ROM. FireRed / LeafGreen have two sets: the
+player's, and the tutorial battles' (the rival's first, the old man's), whose action menu starts the same
+and whose move menu lies 0x34C after it — only the tutorial's had been found, so after the first battle a
+move tapped did nothing (the owner's save, 11-23; both found now).

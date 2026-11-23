@@ -39,7 +39,11 @@ typedef struct {
 	uint32_t controller, actionCursor, moveCursor;
 	const char *actionSig, *moveSig;
 	int moveAfterAction; /* the move menu's function this far after the action menu's, its first bytes not found */
-	uint32_t sigFrom;    /* where in the ROM to look for them (FireRed: an unrelated function before starts the same) */
+	uint32_t sigFrom;    /* where in the ROM to look for them */
+	/* FireRed / LeafGreen: the tutorial battles' controller (the rival's first, the old man's) has menus of
+	 * its own — its action menu's starts as the player's (the next match), its move menu this far after */
+	const char* tutMoveSig;
+	int tutMoveAfter;
 	uint32_t battlers;   /* gBattlersCount: 4 in a double battle */
 	uint32_t storagePtr, storage; /* the PC's boxes: a pointer (FRLG, E) or where they are (RS) */
 	uint32_t inBattle;            /* gMain's inBattle byte (bit 1), found by a dump in and out of a battle */
@@ -53,26 +57,26 @@ static const Layout layouts[] = {
 	  0xF20, 0x290, 0xEE0, 0x820, { { 0x310, 42 }, { 0x430, 13 }, { 0x54C, 43 }, { 0x464, 58 }, { 0x3B8, 30 } },
 	  0x03004FE0, 0x02023FF8, 0x02023FFC,
 	  "\xf0\xb5\x47\x46\x80\xb4\x16\x4f\x16\x4c\x20\x78\x42\x02\xb9\x1c\x51\x18\x0d\x78\xf9\x1c\x52\x18\x11\x78\x09\x02\x0d\x43\x01\x21",
-	  "\x00\xb5\x47\xf7\x41\xf8\x07\x4a\x07\x49\x08\x48\x00\x78\x80\x00\x40\x18\x11\x68\x00\x68\x01\x40\x00\x29\x01\xd1\x01\xf0\x7a\xf8", 0x34C,
-	  0x40000, 0x02023BCC, 0x03005010, 0, 0x03003529, 0, 0x02036DFC, 640, 7 },
+	  "\xf0\xb5\x47\x46\x80\xb4\x81\xb0\x00\x20\x80\x46\x13\x4e\x30\x78\x40\x02\x13\x49\x47\x18\x05\xf0\x4f\xf8\x12\x48\xc1\x8d\x01\x25", 0x5D8,
+	  0, "\x00\xb5", 0x34C, 0x02023BCC, 0x03005010, 0, 0x03003529, 0, 0x02036DFC, 640, 7 },
 	{ "Emerald", 0x030022C0, 0x020244E9, 0x020244EC, 0x02024744, 0x02024084, 0x03005D8C, 0x03005D90, 0,
 	  0xAC, 0x490, 0x1270, 0x867, { { 0x560, 30 }, { 0x650, 16 }, { 0x790, 46 }, { 0x690, 64 }, { 0x5D8, 30 } },
 	  0x03005D60, 0x020244AC, 0x020244B0,
 	  "\xf0\xb5\x13\x4b\x13\x4c\x20\x78\x42\x02\x99\x1c\x51\x18\x0d\x78\x03\x33\xd2\x18\x11\x78\x09\x02\x0d\x43\x01\x21\x07\x22\x01\x23",
 	  "\xf0\xb5\x47\x46\x80\xb4\x00\x20\x80\x46\x0a\x4b\x18\x78\x40\x02\x09\x49\x46\x18\x09\x4a\x91\x8d\xf0\x20\x08\x40\x1f\x1c\x00\x28", 0x674,
-	  0, 0x0202406C, 0x03005D94, 0, 0x030026F9, 0, 0x02037318, 512, 6 },
+	  0, NULL, 0, 0x0202406C, 0x03005D94, 0, 0x030026F9, 0, 0x02037318, 512, 6 },
 	{ "Ruby / Sapphire", 0x03001770, 0x03004350, 0x03004360, 0x030045C0, 0x02024A80, 0, 0, 0x02025734,
 	  0, 0x490, 0x1220, 0x807, { { 0x560, 20 }, { 0x600, 16 }, { 0x740, 46 }, { 0x640, 64 }, { 0x5B0, 20 } },
 	  0x03004330, 0x02024E60, 0x02024E64,
 	  "\xf0\xb5\x47\x46\x80\xb4\x17\x4f\x17\x4c\x20\x78\x42\x02\xb9\x1c\x51\x18\x0d\x78\xf9\x1c\x52\x18\x11\x78\x09\x02\x0d\x43\x01\x21",
 	  "\xf0\xb5\x47\x46\x80\xb4\x82\xb0\x00\x20\x80\x46\x12\x4f\x3a\x78\x50\x02\x12\x49\x46\x18\x12\x48\xc1\x8d\x01\x25\x2c\x1c\x0c\x40", 0x5F4,
-	  0, 0x02024A68, 0, 0x020300A0, 0x03001BAD, 0x02024EA4, 0x0202E828, 512, 6 },
+	  0, NULL, 0, 0x02024A68, 0, 0x020300A0, 0x03001BAD, 0x02024EA4, 0x0202E828, 512, 6 },
 	{ "Ruby / Sapphire (Japan)", 0x030016E0, 0x03004280, 0x03004290, 0x030044F0, 0x020247E0, 0, 0, 0x02025494,
 	  0, 0x490, 0x1220, 0x807, { { 0x560, 20 }, { 0x600, 16 }, { 0x740, 46 }, { 0x640, 64 }, { 0x5B0, 20 } },
 	  0x03004260, 0x02024BC0, 0x02024BC4,
 	  "\xf0\xb5\x47\x46\x80\xb4\x16\x4f\x16\x4c\x20\x78\x42\x02\xb9\x1c\x51\x18\x0d\x78\xf9\x1c\x52\x18\x11\x78\x09\x02\x0d\x43\x01\x21",
 	  "\xf0\xb5\x47\x46\x80\xb4\x82\xb0\x00\x20\x80\x46\x12\x4e\x32\x78\x50\x02\x12\x49\x47\x18\x12\x48\xc1\x8d\x01\x25\x2c\x1c\x0c\x40", 0x5DC,
-	  0, 0x020247C8, 0, 0x0202FDC0, 0x03001B19, 0x02024C04, 0x0202E588, 512, 6 },
+	  0, NULL, 0, 0x020247C8, 0, 0x0202FDC0, 0x03001B19, 0x02024C04, 0x0202E588, 512, 6 },
 };
 #define N_LAYOUTS (int) (sizeof(layouts) / sizeof(layouts[0]))
 
@@ -100,7 +104,8 @@ static struct {
 	uint32_t moves;                                /* gBattleMoves, 0: not found */
 	uint32_t national;                             /* species-to-national (entry 0: species 1), 0: not found */
 	uint32_t size;
-	uint32_t actionFn, moveFn; /* the battle menus' functions (Thumb: +1), 0: not found */
+	uint32_t actionFn, moveFn;   /* the battle menus' functions (Thumb: +1), 0: not found */
+	uint32_t actionFn2, moveFn2; /* FRLG's tutorial battles' (0: none) */
 	uint32_t baseStats;        /* gBaseStats (28 bytes a species, entry 0: none), 0: not found */
 	const uint8_t* bytes;      /* the ROM itself (the core's copy, while the game is loaded) */
 } rom;
@@ -172,8 +177,15 @@ static void rom_scan(Emu* e) {
 			uint32_t at = rom.actionFn - 1 + L->moveAfterAction - 0x08000000;
 			if (at + 2 <= n && r[at] == (uint8_t) L->moveSig[0] && r[at + 1] == (uint8_t) L->moveSig[1]) rom.moveFn = 0x08000000 + at + 1;
 		}
+		if (rom.actionFn && L->tutMoveSig) {
+			for (size_t o = rom.actionFn + 1 - 0x08000000; o + 32 <= n && !rom.actionFn2; o += 2)
+				if (!memcmp(r + o, L->actionSig, 32)) rom.actionFn2 = 0x08000000 + (uint32_t) o + 1;
+			uint32_t at = rom.actionFn2 ? rom.actionFn2 - 1 + L->tutMoveAfter - 0x08000000 : 0;
+			if (at && at + 2 <= n && r[at] == (uint8_t) L->tutMoveSig[0] && r[at + 1] == (uint8_t) L->tutMoveSig[1]) rom.moveFn2 = 0x08000000 + at + 1;
+			else rom.actionFn2 = 0;
+		}
 	}
-	fprintf(stderr, "pokemon: battle menus %s\n", rom.actionFn && rom.moveFn ? "found" : "not found");
+	fprintf(stderr, "pokemon: battle menus %s%s\n", rom.actionFn && rom.moveFn ? "found" : "not found", rom.actionFn2 ? " (and the tutorial's)" : "");
 	fprintf(stderr, "pokemon: %s (gMain refs %d/%d/%d/%d), icons %s, moves %s, national %s\n", rom.lay ? rom.lay->name : "no layout",
 	        refs[0], refs[1], refs[2], refs[3], rom.icons ? "yes" : "no", rom.moves ? "yes" : "no", rom.national ? "yes" : "no");
 }
@@ -1114,7 +1126,7 @@ static void page_map(Emu* e, const Layout* l, uint32_t* key) {
 	uint32_t sb1 = sb1_of(e, l);
 	int pxb = (int16_t) emu_read16(e, sb1), pyb = (int16_t) emu_read16(e, sb1 + 2);
 	*key = (*key ^ layout) * 16777619u;
-	*key = (*key ^ (uint32_t) (pxb << 16 | (pyb & 0xFFFF))) * 16777619u;
+	*key = (*key ^ ((uint32_t) pxb << 16 | ((uint32_t) pyb & 0xFFFF))) * 16777619u;
 	*key = (*key ^ (uint32_t) animFrame) * 16777619u;
 	if (!px) return;
 	/* (another game: nothing kept) */
@@ -1130,7 +1142,8 @@ static void page_map(Emu* e, const Layout* l, uint32_t* key) {
 	int dw = (int) (fw * sc), dh = (int) (fh * sc);
 	if (sc < 0.5) {
 		sc = 0.5;
-		dw = aw, dh = ah;
+		/* (a side that fits at half size: whole and centred) */
+		dw = fw / 2 < aw ? fw / 2 : aw, dh = fh / 2 < ah ? fh / 2 : ah;
 		/* (the view moves a block at a time: redrawn only then) */
 		vx = (pxb * 16 + 8 - (int) (aw / sc / 2)) / 16 * 16, vy = (pyb * 16 + 8 - (int) (ah / sc / 2)) / 16 * 16;
 		if (vx > fw - (int) (aw / sc)) vx = fw - (int) (aw / sc);
@@ -1179,6 +1192,8 @@ static void page_map(Emu* e, const Layout* l, uint32_t* key) {
 	for (int dy = -r - 2; dy <= r + 2; ++dy)
 		for (int dx = -r - 2; dx <= r + 2; ++dx) {
 			int d = dx * dx + dy * dy;
+			/* (only on the map: a player off its edge, a warp's first frames, isn't drawn on the bars) */
+			if (cx + dx < ax || cx + dx >= ax + aw || cy + dy < ay || cy + dy >= ay + ah) continue;
 			if (d <= r * r) put(cx + dx, cy + dy, RGB(232, 48, 48));
 			else if (d <= (r + 2) * (r + 2)) put(cx + dx, cy + dy, white);
 		}
@@ -1383,11 +1398,19 @@ uint32_t poke_keys(void) {
 	return injected;
 }
 
+static bool is_action_menu(uint32_t f) {
+	return f && (f == rom.actionFn || f == rom.actionFn2);
+}
+
+static bool is_move_menu(uint32_t f) {
+	return f && (f == rom.moveFn || f == rom.moveFn2);
+}
+
 /* the player's Pokémon (0 or 2) whose turn the menus are for; -1: neither's */
 static int menu_battler(Emu* e, const Layout* l, int nBat) {
 	for (int b = 0; b < nBat; b += 2) {
 		uint32_t f = emu_read32(e, l->controller + b * 4);
-		if (f == rom.actionFn || f == rom.moveFn) return b;
+		if (is_action_menu(f) || is_move_menu(f)) return b;
 	}
 	return -1;
 }
@@ -1413,7 +1436,7 @@ static void battle_act(Emu* e, const Layout* l, const Battler* bat) {
 		return;
 	}
 	uint32_t f = emu_read32(e, l->controller + act.battler * 4);
-	if (f == rom.actionFn && act.stage == 0) {
+	if (is_action_menu(f) && act.stage == 0) {
 		if (act.move >= 4) {
 			emu_write8(e, l->actionCursor + act.battler, (uint8_t) (act.move - 3));
 			act.press = 6, act.stage = 1, injected = K_A;
@@ -1421,7 +1444,7 @@ static void battle_act(Emu* e, const Layout* l, const Battler* bat) {
 			emu_write8(e, l->actionCursor + act.battler, 0);
 			act.press = 6, injected = K_A;
 		}
-	} else if (f == rom.moveFn && act.stage == 0) {
+	} else if (is_move_menu(f) && act.stage == 0) {
 		if (act.move >= 4) {
 			/* (on the move menu: back to the action menu first) */
 			act.press = 0, injected = K_B;
@@ -1509,6 +1532,16 @@ static void take_tap(Emu* e, const Battler* bat, int mine) {
 
 static uint32_t hiOut[HW * HH];
 static bool hiValid;
+
+uint32_t poke_player_keys(uint32_t keys) {
+	static uint32_t held;
+	uint32_t down = keys & ~held & (K_L | K_R);
+	held = keys;
+	if (!hiValid || ui.page != PAGE_BAG) return keys;
+	if (down & K_R) ui.pocket = (ui.pocket + 1) % 5, ui.bagStart = 0;
+	if (down & K_L) ui.pocket = (ui.pocket + 4) % 5, ui.bagStart = 0;
+	return keys & ~(uint32_t) (K_L | K_R);
+}
 
 const uint32_t* poke_page_hi(void) {
 	return hiValid ? hiOut : NULL;

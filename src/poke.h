@@ -44,6 +44,9 @@ bool poke_supported(const char* gameCode);
 void poke_touch(int x, int y, bool down);
 /* Keys the pages press for the player this frame (a move tapped in a battle), ORed into theirs. */
 uint32_t poke_keys(void);
+/* The player's own keys this frame, before the game gets them: while the 背包 page is shown, L and R turn
+ * its pockets (R the next, L the one before) and the game doesn't get them; otherwise as they are. */
+uint32_t poke_player_keys(uint32_t keys);
 /* The page at twice the GBA's size, 480 × 320 (ABGR8888), as poke_live_view last drew it this frame; NULL
  * when there's none (the logo). poke_live_view's own picture is it at 240 × 160. Taps (poke_touch) are in
  * its pixels. */
