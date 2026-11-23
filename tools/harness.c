@@ -7,6 +7,7 @@
  *   wait N               run N frames with no input
  *   tap KEYS [COUNT]     press KEYS 3 frames then release 9 frames, COUNT times
  *   shot NAME            write OUTDIR/NAME.png
+ *   live NAME            the profile's liveView picture to OUTDIR/NAME.png
  *   seq NAME N STEP      N shots STEP frames apart (no input) NAME_00.png...
  *   save NAME / load NAME   savestate to/from OUTDIR/NAME.ss (or NAME itself, if it has a '/')
  *   map NAME             run shadow map capture, write OUTDIR/NAME.png
@@ -233,6 +234,17 @@ int main(int argc, char** argv) {
 			}
 		} else if (!strcmp(cmd, "shot")) {
 			shot(a1);
+		} else if (!strcmp(cmd, "live")) {
+			/* live NAME: the profile's own live picture now (liveView), or "no live view" */
+			const MapProfile* lp = profile_find(emu.gameCode);
+			const uint32_t* lv = lp && lp->liveView ? lp->liveView(&emu, argv[1]) : NULL;
+			if (!lv) printf("live %s: no live view\n", a1);
+			else {
+				char path[512];
+				snprintf(path, sizeof(path), "%s/%s.png", outdir, a1);
+				write_png(path, lv, lp->crop_w, lp->crop_h, lp->crop_w);
+				printf("live %s: written\n", a1);
+			}
 		} else if (!strcmp(cmd, "split")) {
 			/* split BGMASK PRIO (on) / split off: the HUD split (emu_hud_split) */
 			static uint32_t hud[GBA_W * GBA_H];

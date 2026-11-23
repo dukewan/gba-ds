@@ -1,4 +1,5 @@
 #include "profiles.h"
+#include "poke.h"
 
 #include <mgba/core/core.h>
 
@@ -8119,6 +8120,29 @@ static const char* smt_compose(Emu* s, const void* state, uint32_t* out, int w, 
 }
 
 static const MapProfile profiles[] = {
+	{
+		/* Pokémon FireRed, LeafGreen and Emerald (游典's fork): the party,
+		 * drawn live from the game's memory (src/poke.c,
+		 * docs/games/pokemon-gen3.md); the logo before there is one */
+		.codes = { "BPRE", "BPGE", "BPEE" },
+		.title = "Pokémon FireRed / LeafGreen / Emerald",
+		.crop_w = GBA_W,
+		.crop_h = GBA_H,
+		.virt = poke_virt,
+		.liveView = poke_live_view,
+		.live = { { POKE_V_NEVER, 0xFF, 1, 1 } },
+	},
+	{
+		/* Pokémon Ruby and Sapphire, USA and Japan (Chinese translations
+		 * are of the Japanese release): as above */
+		.codes = { "AXVE", "AXPE", "AXVJ", "AXPJ" },
+		.title = "Pokémon Ruby / Sapphire",
+		.crop_w = GBA_W,
+		.crop_h = GBA_H,
+		.virt = poke_virt,
+		.liveView = poke_live_view,
+		.live = { { POKE_V_NEVER, 0xFF, 1, 1 } },
+	},
 	{
 		.codes = { "A2CE" },
 		.title = "Castlevania: Aria of Sorrow",
