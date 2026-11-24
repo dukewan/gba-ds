@@ -50,6 +50,17 @@ typedef struct {
 	uint32_t sb2;                 /* save block 2 where it's fixed (RS; FRLG / E: sb2Ptr): the Pokédex, play time */
 	uint32_t mapHeader;           /* gMapHeader: the map the player is on (its layout first) */
 	int primaryTiles, primaryPals; /* the primary tileset's tiles (and metatiles) and palettes: FRLG 640 / 7, else 512 / 6 */
+	/* 背包 → the game's own bag, opened on an item (bagState 0: not here). The start menu: its callback (0
+	 * while closed), cursor, count and order of entries, the bag's entry in it; the overworld's callback 2 by
+	 * its first bytes; the bag's remembered place (its pocket, each pocket's cursor and items above, u16s at
+	 * these offsets) and the rows it shows; each of our pockets' pocket in the game's bag (-1: kept in a key
+	 * item, keyItemFor's) */
+	uint32_t startCb, startCursor, startCount, startOrder;
+	int bagId;
+	const char* overworldSig;
+	uint32_t bagState;
+	int bagPocketOff, bagCursorOff, bagAboveOff, bagRows;
+	int gamePocket[5], keyItemFor[5];
 } Layout;
 
 static const Layout layouts[] = {
@@ -58,7 +69,10 @@ static const Layout layouts[] = {
 	  0x03004FE0, 0x02023FF8, 0x02023FFC,
 	  "\xf0\xb5\x47\x46\x80\xb4\x16\x4f\x16\x4c\x20\x78\x42\x02\xb9\x1c\x51\x18\x0d\x78\xf9\x1c\x52\x18\x11\x78\x09\x02\x0d\x43\x01\x21",
 	  "\xf0\xb5\x47\x46\x80\xb4\x81\xb0\x00\x20\x80\x46\x13\x4e\x30\x78\x40\x02\x13\x49\x47\x18\x05\xf0\x4f\xf8\x12\x48\xc1\x8d\x01\x25", 0x5D8,
-	  0, "\x00\xb5", 0x34C, 0x02023BCC, 0x03005010, 0, 0x03003529, 0, 0x02036DFC, 640, 7 },
+	  0, "\x00\xb5", 0x34C, 0x02023BCC, 0x03005010, 0, 0x03003529, 0, 0x02036DFC, 640, 7,
+	  0x020370F0, 0x020370F4, 0x020370F5, 0x020370F6, 2,
+	  "\x10\xb5\x09\x48\xc0\x79\xc0\x09\x04\x1c\x00\x2c\x02\xd0\x00\x20\xaa\xf7\x96\xf8\xff\xf7\xd6\xff\x00\x2c\x01\xd0\x00\xf0\x18\xfa",
+	  0x0203ACFC, 6, 8, 0xE, 6, { 0, 2, -1, -1, 1 }, { 0, 0, 365, 364, 0 } },
 	{ "Emerald", 0x030022C0, 0x020244E9, 0x020244EC, 0x02024744, 0x02024084, 0x03005D8C, 0x03005D90, 0,
 	  0xAC, 0x490, 0x1270, 0x867, { { 0x560, 30 }, { 0x650, 16 }, { 0x790, 46 }, { 0x690, 64 }, { 0x5D8, 30 } },
 	  0x03005D60, 0x020244AC, 0x020244B0,
@@ -106,6 +120,7 @@ static struct {
 	uint32_t size;
 	uint32_t actionFn, moveFn;   /* the battle menus' functions (Thumb: +1), 0: not found */
 	uint32_t actionFn2, moveFn2; /* FRLG's tutorial battles' (0: none) */
+	uint32_t overworld;          /* the overworld's callback 2 (Thumb: +1), 0: not found */
 	uint32_t baseStats;        /* gBaseStats (28 bytes a species, entry 0: none), 0: not found */
 	const uint8_t* bytes;      /* the ROM itself (the core's copy, while the game is loaded) */
 } rom;
@@ -185,6 +200,9 @@ static void rom_scan(Emu* e) {
 			else rom.actionFn2 = 0;
 		}
 	}
+	if (L && L->overworldSig)
+		for (size_t o = 0; o + 32 <= n && !rom.overworld; o += 2)
+			if (!memcmp(r + o, L->overworldSig, 32)) rom.overworld = 0x08000000 + (uint32_t) o + 1;
 	fprintf(stderr, "pokemon: battle menus %s%s\n", rom.actionFn && rom.moveFn ? "found" : "not found", rom.actionFn2 ? " (and the tutorial's)" : "");
 	fprintf(stderr, "pokemon: %s (gMain refs %d/%d/%d/%d), icons %s, moves %s, national %s\n", rom.lay ? rom.lay->name : "no layout",
 	        refs[0], refs[1], refs[2], refs[3], rom.icons ? "yes" : "no", rom.moves ? "yes" : "no", rom.national ? "yes" : "no");
@@ -689,6 +707,7 @@ static struct {
 	int page, pageBefore; /* before the battle, gone back to after it */
 	bool inBattle;
 	int pocket, bagStart;
+	int bagPick; /* the item tapped in the pocket shown (-1: none) */
 	int box;     /* the box shown (-1: the game's current one) */
 	int boxPick; /* the place picked in it */
 	int dexPage, dexPick; /* the Pokédex's page (36 a page) and the national number picked (0: none) */
@@ -696,7 +715,7 @@ static struct {
 	/* touches: a tap is taken where the finger went down */
 	bool down, tapped;
 	int tapX, tapY;
-} ui = { .box = -1, .summary = -1 };
+} ui = { .box = -1, .summary = -1, .bagPick = -1 };
 
 void poke_touch(int x, int y, bool down) {
 	if (down && !ui.down) ui.tapped = true, ui.tapX = x, ui.tapY = y;
@@ -1331,18 +1350,24 @@ static void page_box(Emu* e, const Layout* l, uint32_t* key) {
 
 static const int pocketX[5] = { 4, 64, 148, 208, 292 };
 
-static void page_bag(Emu* e, const Layout* l, uint32_t* key) {
+/* a pocket's items as the bag lists them (its places in order, the empty ones left out); how many */
+static int pocket_list(Emu* e, const Layout* l, int pocket, int* ids, int* qty, uint32_t* key) {
 	uint32_t sb1 = sb1_of(e, l), k = key_of(e, l) & 0xFFFF;
-	const Pocket* p = &l->pockets[ui.pocket];
-	int ids[64], qty[64], n = 0;
+	const Pocket* p = &l->pockets[pocket];
+	int n = 0;
 	for (int i = 0; i < p->n && i < 64; ++i) {
 		uint32_t v = emu_read32(e, sb1 + p->off + i * 4);
 		int id = v & 0xFFFF, q = (int) ((v >> 16) ^ k);
-		*key = (*key ^ v) * 16777619u;
+		if (key) *key = (*key ^ v) * 16777619u;
 		if (!id) continue;
 		ids[n] = id, qty[n] = q, ++n;
 	}
-	*key = (*key ^ (uint32_t) (ui.pocket | ui.bagStart << 4)) * 16777619u;
+	return n;
+}
+
+static void page_bag(Emu* e, const Layout* l, uint32_t* key) {
+	int ids[64], qty[64], n = pocket_list(e, l, ui.pocket, ids, qty, key);
+	*key = (*key ^ (uint32_t) (ui.pocket | ui.bagStart << 4 | (ui.bagPick + 1) << 12)) * 16777619u;
 	if (!px) return;
 	for (int i = 0; i < 5; ++i) {
 		int x = pocketX[i], w = text_width(pocketNames[i], 2) + 12;
@@ -1365,6 +1390,7 @@ static void page_bag(Emu* e, const Layout* l, uint32_t* key) {
 		char q[12] = "×";
 		number(q + strlen(q), qty[i]);
 		int qw = keyItem ? 0 : text_width(q, 2) + 8;
+		if (i == ui.bagPick) panel(x - 5, y - 2, 230, 27, orange, RGB(248, 216, 160));
 		text_fit(x, y, name, ink, soft, 2, 222 - qw);
 		if (!keyItem) text_right(x + 222, y, q, ink, soft, 2);
 	}
@@ -1460,7 +1486,100 @@ static void battle_act(Emu* e, const Layout* l, const Battler* bat) {
 	}
 }
 
-/* a tap: on a page's tab, a move or action, a box's place or arrow, the Pokédex, a pocket */
+/* ------------------------------------------------------------------ 背包 → the game's own bag
+ *
+ * A tap on an item opens the game's bag on it, its cursor there, for the player's A: in a battle by the action
+ * menu's BAG (as a tapped action), on the overworld by START and the start menu's bag entry. The bag's
+ * remembered place is written first (it opens where it was left). Nothing is used for the player. */
+static struct {
+	int stage; /* 0: none; 1: START to press; 2: the start menu awaited; 3: its cursor to the bag; 4: A pressed */
+	int frames, press, settle, entry;
+	uint32_t keys, lastCb;
+	int gp, idx, count;
+} bagGo;
+
+static void bag_place(Emu* e, const Layout* l, int gp, int idx, int count) {
+	int total = count + 1; /* (the list's last row: 取消) */
+	int maxAbove = total > l->bagRows ? total - l->bagRows : 0;
+	int above = idx < maxAbove ? idx : maxAbove;
+	emu_write16(e, l->bagState + (uint32_t) l->bagPocketOff, (uint16_t) gp);
+	emu_write16(e, l->bagState + (uint32_t) (l->bagCursorOff + gp * 2), (uint16_t) (idx - above));
+	emu_write16(e, l->bagState + (uint32_t) (l->bagAboveOff + gp * 2), (uint16_t) above);
+}
+
+static void bag_open_on(Emu* e, const Layout* l, int pocket, int i, int mine) {
+	if (!l || !l->bagState) return;
+	int ids[64], qty[64];
+	int gp = l->gamePocket[pocket], idx = i, from = pocket;
+	if (gp < 0) {
+		/* (FRLG's berries and TMs: their key item, 树果袋 / 学习器盒) */
+		int n4 = pocket_list(e, l, 4, ids, qty, NULL);
+		idx = -1;
+		for (int j = 0; j < n4; ++j)
+			if (ids[j] == l->keyItemFor[pocket]) idx = j;
+		if (idx < 0) return;
+		from = 4, gp = l->gamePocket[4];
+	}
+	int count = pocket_list(e, l, from, ids, qty, NULL);
+	if (idx < 0 || idx >= count) return;
+	if (ui.inBattle) {
+		/* (key items aren't a battle's) */
+		if (from == 4 || !rom.actionFn || act.move >= 0) return;
+		bag_place(e, l, gp, idx, count);
+		act = (typeof(act)) { 4, mine, 0, 0, 0, 0, act.doubles };
+		return;
+	}
+	if (bagGo.stage || !rom.overworld) return;
+	bagGo = (typeof(bagGo)) { .stage = 1, .gp = gp, .idx = idx, .count = count };
+}
+
+static void bag_go(Emu* e, const Layout* l) {
+	injected = 0;
+	if (!bagGo.stage) return;
+	if (++bagGo.frames > 150) {
+		bagGo.stage = 0;
+		return;
+	}
+	if (bagGo.press > 0) {
+		injected = bagGo.press > 3 ? bagGo.keys : 0;
+		if (--bagGo.press == 0 && bagGo.stage == 4) bagGo.stage = 0;
+		return;
+	}
+	if (bagGo.stage == 1) {
+		/* only on the overworld with the start menu closed (a message, a script: START does nothing, and the
+		 * wait below runs out) */
+		if (emu_read32(e, l->gMain + 4) != rom.overworld || emu_read32(e, l->startCb)) {
+			bagGo.stage = 0;
+			return;
+		}
+		bag_place(e, l, bagGo.gp, bagGo.idx, bagGo.count);
+		bagGo.keys = K_START, bagGo.press = 6, injected = K_START, bagGo.stage = 2;
+		return;
+	}
+	if (bagGo.stage == 2) {
+		uint32_t cb = emu_read32(e, l->startCb);
+		if (!cb || cb != bagGo.lastCb) {
+			bagGo.lastCb = cb, bagGo.settle = 0;
+			return;
+		}
+		if (++bagGo.settle < 6) return;
+		int n = emu_read8(e, l->startCount);
+		bagGo.entry = -1;
+		for (int j = 0; j < n && j < 10; ++j)
+			if (emu_read8(e, l->startOrder + (uint32_t) j) == l->bagId) bagGo.entry = j;
+		if (bagGo.entry < 0) {
+			bagGo.stage = 0;
+			return;
+		}
+		bagGo.stage = 3;
+	}
+	int cur = emu_read8(e, l->startCursor);
+	bagGo.keys = cur == bagGo.entry ? K_A : cur < bagGo.entry ? K_DOWN : K_UP;
+	if (bagGo.keys == K_A) bagGo.stage = 4;
+	bagGo.press = 6, injected = bagGo.keys;
+}
+
+/* a tap: on a page's tab, a move or action, a box's place or arrow, the Pokédex, a pocket, an item */
 static void take_tap(Emu* e, const Battler* bat, int mine) {
 	if (!ui.tapped) return;
 	ui.tapped = false;
@@ -1520,11 +1639,20 @@ static void take_tap(Emu* e, const Battler* bat, int mine) {
 				if (x >= pocketX[i]) {
 					if (ui.pocket == i) ui.bagStart += 13;
 					else ui.pocket = i, ui.bagStart = 0;
+					ui.bagPick = -1;
 					return;
 				}
 		}
-		/* a tap on the list: its next items */
-		ui.bagStart += 13;
+		/* an item: the game's bag opened on it; elsewhere on the list (还有…个): its next items */
+		int ids[64], qty[64], n = rom.lay ? pocket_list(e, rom.lay, ui.pocket, ids, qty, NULL) : 0;
+		int row = (y - (TOP + 42)) / 28, col = x >= 240 ? 1 : 0, j = col * 7 + row;
+		int shown = n - ui.bagStart > 14 ? 13 : n - ui.bagStart;
+		if (y >= TOP + 42 && row < 7 && j < shown) {
+			ui.bagPick = ui.bagStart + j;
+			bag_open_on(e, rom.lay, ui.pocket, ui.bagPick, mine);
+			return;
+		}
+		ui.bagStart += 13, ui.bagPick = -1;
 	}
 }
 
@@ -1538,8 +1666,8 @@ uint32_t poke_player_keys(uint32_t keys) {
 	uint32_t down = keys & ~held & (K_L | K_R);
 	held = keys;
 	if (!hiValid || ui.page != PAGE_BAG) return keys;
-	if (down & K_R) ui.pocket = (ui.pocket + 1) % 5, ui.bagStart = 0;
-	if (down & K_L) ui.pocket = (ui.pocket + 4) % 5, ui.bagStart = 0;
+	if (down & K_R) ui.pocket = (ui.pocket + 1) % 5, ui.bagStart = 0, ui.bagPick = -1;
+	if (down & K_L) ui.pocket = (ui.pocket + 4) % 5, ui.bagStart = 0, ui.bagPick = -1;
 	return keys & ~(uint32_t) (K_L | K_R);
 }
 
@@ -1599,7 +1727,8 @@ const uint32_t* poke_live_view(Emu* e, const char* romPath) {
 	}
 	take_tap(e, bat, mine);
 	if (inBattle) battle_act(e, l, bat);
-	else injected = 0, act.move = -1;
+	else act.move = -1, bag_go(e, l);
+	if (inBattle) bagGo.stage = 0;
 	uint32_t sb1 = sb1_of(e, l), sb2 = sb2_of(e, l);
 	key = (key ^ emu_read32(e, sb1 + l->moneyOff)) * 16777619u;
 	key = (key ^ (uint32_t) badges_of(e, l)) * 16777619u;
