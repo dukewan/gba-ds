@@ -50,16 +50,15 @@ typedef struct {
 	uint32_t sb2;                 /* save block 2 where it's fixed (RS; FRLG / E: sb2Ptr): the Pokédex, play time */
 	uint32_t mapHeader;           /* gMapHeader: the map the player is on (its layout first) */
 	int primaryTiles, primaryPals; /* the primary tileset's tiles (and metatiles) and palettes: FRLG 640 / 7, else 512 / 6 */
-	/* 背包 → the game's own bag, opened on an item (bagState 0: not here). The start menu: its callback (0
-	 * while closed), cursor, count and order of entries, the bag's entry in it; the overworld's callback 2 by
-	 * its first bytes; the bag's remembered place (its pocket, each pocket's cursor and items above, u16s at
-	 * these offsets) and the rows it shows; each of our pockets' pocket in the game's bag (-1: kept in a key
-	 * item, keyItemFor's) */
+	/* 背包 → the game's own bag, opened on an item (bagPocket 0: not here). The start menu: its callback (0
+	 * while closed), cursor, count and order of entries, the bag's entry in it; the bag's remembered place —
+	 * its pocket (bagPocketSize bytes), each pocket's cursor and items above (bagFieldSize bytes, bagStride
+	 * apart) — and the rows it shows; each of our pockets' pocket in the game's bag (-1: kept in a key item,
+	 * keyItemFor's) */
 	uint32_t startCb, startCursor, startCount, startOrder;
 	int bagId;
-	const char* overworldSig;
-	uint32_t bagState;
-	int bagPocketOff, bagCursorOff, bagAboveOff, bagRows;
+	uint32_t bagPocket, bagCursor, bagAbove;
+	int bagPocketSize, bagStride, bagFieldSize, bagRows;
 	int gamePocket[5], keyItemFor[5];
 } Layout;
 
@@ -71,26 +70,31 @@ static const Layout layouts[] = {
 	  "\xf0\xb5\x47\x46\x80\xb4\x81\xb0\x00\x20\x80\x46\x13\x4e\x30\x78\x40\x02\x13\x49\x47\x18\x05\xf0\x4f\xf8\x12\x48\xc1\x8d\x01\x25", 0x5D8,
 	  0, "\x00\xb5", 0x34C, 0x02023BCC, 0x03005010, 0, 0x03003529, 0, 0x02036DFC, 640, 7,
 	  0x020370F0, 0x020370F4, 0x020370F5, 0x020370F6, 2,
-	  "\x10\xb5\x09\x48\xc0\x79\xc0\x09\x04\x1c\x00\x2c\x02\xd0\x00\x20\xaa\xf7\x96\xf8\xff\xf7\xd6\xff\x00\x2c\x01\xd0\x00\xf0\x18\xfa",
-	  0x0203ACFC, 6, 8, 0xE, 6, { 0, 2, -1, -1, 1 }, { 0, 0, 365, 364, 0 } },
+	  0x0203AD02, 0x0203AD04, 0x0203AD0A, 2, 2, 2, 6, { 0, 2, -1, -1, 1 }, { 0, 0, 365, 364, 0 } },
 	{ "Emerald", 0x030022C0, 0x020244E9, 0x020244EC, 0x02024744, 0x02024084, 0x03005D8C, 0x03005D90, 0,
 	  0xAC, 0x490, 0x1270, 0x867, { { 0x560, 30 }, { 0x650, 16 }, { 0x790, 46 }, { 0x690, 64 }, { 0x5D8, 30 } },
 	  0x03005D60, 0x020244AC, 0x020244B0,
 	  "\xf0\xb5\x13\x4b\x13\x4c\x20\x78\x42\x02\x99\x1c\x51\x18\x0d\x78\x03\x33\xd2\x18\x11\x78\x09\x02\x0d\x43\x01\x21\x07\x22\x01\x23",
 	  "\xf0\xb5\x47\x46\x80\xb4\x00\x20\x80\x46\x0a\x4b\x18\x78\x40\x02\x09\x49\x46\x18\x09\x4a\x91\x8d\xf0\x20\x08\x40\x1f\x1c\x00\x28", 0x674,
-	  0, NULL, 0, 0x0202406C, 0x03005D94, 0, 0x030026F9, 0, 0x02037318, 512, 6 },
+	  0, NULL, 0, 0x0202406C, 0x03005D94, 0, 0x030026F9, 0, 0x02037318, 512, 6,
+	  0x03005DF4, 0x0203760E, 0x0203760F, 0x02037610, 2,
+	  0x0203CE5D, 0x0203CE60, 0x0203CE6A, 1, 2, 2, 8, { 0, 1, 3, 2, 4 }, { 0 } },
 	{ "Ruby / Sapphire", 0x03001770, 0x03004350, 0x03004360, 0x030045C0, 0x02024A80, 0, 0, 0x02025734,
 	  0, 0x490, 0x1220, 0x807, { { 0x560, 20 }, { 0x600, 16 }, { 0x740, 46 }, { 0x640, 64 }, { 0x5B0, 20 } },
 	  0x03004330, 0x02024E60, 0x02024E64,
 	  "\xf0\xb5\x47\x46\x80\xb4\x17\x4f\x17\x4c\x20\x78\x42\x02\xb9\x1c\x51\x18\x0d\x78\xf9\x1c\x52\x18\x11\x78\x09\x02\x0d\x43\x01\x21",
 	  "\xf0\xb5\x47\x46\x80\xb4\x82\xb0\x00\x20\x80\x46\x12\x4f\x3a\x78\x50\x02\x12\x49\x46\x18\x12\x48\xc1\x8d\x01\x25\x2c\x1c\x0c\x40", 0x5F4,
-	  0, NULL, 0, 0x02024A68, 0, 0x020300A0, 0x03001BAD, 0x02024EA4, 0x0202E828, 512, 6 },
+	  0, NULL, 0, 0x02024A68, 0, 0x020300A0, 0x03001BAD, 0x02024EA4, 0x0202E828, 512, 6,
+	  0x03004AE8, 0x0202E8FC, 0x0202E8FD, 0x0202E8FE, 2,
+	  0x02038559, 0x03005D10, 0x03005D11, 1, 4, 1, 8, { 0, 1, 3, 2, 4 }, { 0 } },
 	{ "Ruby / Sapphire (Japan)", 0x030016E0, 0x03004280, 0x03004290, 0x030044F0, 0x020247E0, 0, 0, 0x02025494,
 	  0, 0x490, 0x1220, 0x807, { { 0x560, 20 }, { 0x600, 16 }, { 0x740, 46 }, { 0x640, 64 }, { 0x5B0, 20 } },
 	  0x03004260, 0x02024BC0, 0x02024BC4,
 	  "\xf0\xb5\x47\x46\x80\xb4\x16\x4f\x16\x4c\x20\x78\x42\x02\xb9\x1c\x51\x18\x0d\x78\xf9\x1c\x52\x18\x11\x78\x09\x02\x0d\x43\x01\x21",
 	  "\xf0\xb5\x47\x46\x80\xb4\x82\xb0\x00\x20\x80\x46\x12\x4e\x32\x78\x50\x02\x12\x49\x47\x18\x12\x48\xc1\x8d\x01\x25\x2c\x1c\x0c\x40", 0x5DC,
-	  0, NULL, 0, 0x020247C8, 0, 0x0202FDC0, 0x03001B19, 0x02024C04, 0x0202E588, 512, 6 },
+	  0, NULL, 0, 0x020247C8, 0, 0x0202FDC0, 0x03001B19, 0x02024C04, 0x0202E588, 512, 6,
+	  0x03004A18, 0x0202E64C, 0x0202E64D, 0x0202E64E, 2,
+	  0x02038258, 0x03005C30, 0x03005C31, 1, 4, 1, 8, { 0, 1, 3, 2, 4 }, { 0 } },
 };
 #define N_LAYOUTS (int) (sizeof(layouts) / sizeof(layouts[0]))
 
@@ -200,9 +204,14 @@ static void rom_scan(Emu* e) {
 			else rom.actionFn2 = 0;
 		}
 	}
-	if (L && L->overworldSig)
+	/* the overworld's callback 2 (CB2_Overworld): its first 16 bytes and its 25th to 28th, the same in every
+	 * Gen 3 game (the calls between differ): once in each of 36 ROMs and hacks tried */
+	if (L && L->bagPocket) {
+		static const uint8_t ow[16] = { 0x10, 0xb5, 0x09, 0x48, 0xc0, 0x79, 0xc0, 0x09, 0x04, 0x1c, 0x00, 0x2c, 0x02, 0xd0, 0x00, 0x20 };
+		static const uint8_t ow2[4] = { 0x00, 0x2c, 0x01, 0xd0 };
 		for (size_t o = 0; o + 32 <= n && !rom.overworld; o += 2)
-			if (!memcmp(r + o, L->overworldSig, 32)) rom.overworld = 0x08000000 + (uint32_t) o + 1;
+			if (!memcmp(r + o, ow, 16) && !memcmp(r + o + 24, ow2, 4)) rom.overworld = 0x08000000 + (uint32_t) o + 1;
+	}
 	fprintf(stderr, "pokemon: battle menus %s%s\n", rom.actionFn && rom.moveFn ? "found" : "not found", rom.actionFn2 ? " (and the tutorial's)" : "");
 	fprintf(stderr, "pokemon: %s (gMain refs %d/%d/%d/%d), icons %s, moves %s, national %s\n", rom.lay ? rom.lay->name : "no layout",
 	        refs[0], refs[1], refs[2], refs[3], rom.icons ? "yes" : "no", rom.moves ? "yes" : "no", rom.national ? "yes" : "no");
@@ -1509,17 +1518,23 @@ static struct {
 	int gp, idx, count;
 } bagGo;
 
+static void write_n(Emu* e, uint32_t a, int size, int v) {
+	if (size == 1) emu_write8(e, a, (uint8_t) v);
+	else emu_write16(e, a, (uint16_t) v);
+}
+
 static void bag_place(Emu* e, const Layout* l, int gp, int idx, int count) {
 	int total = count + 1; /* (the list's last row: 取消) */
 	int maxAbove = total > l->bagRows ? total - l->bagRows : 0;
-	int above = idx < maxAbove ? idx : maxAbove;
-	emu_write16(e, l->bagState + (uint32_t) l->bagPocketOff, (uint16_t) gp);
-	emu_write16(e, l->bagState + (uint32_t) (l->bagCursorOff + gp * 2), (uint16_t) (idx - above));
-	emu_write16(e, l->bagState + (uint32_t) (l->bagAboveOff + gp * 2), (uint16_t) above);
+	/* (on the first screen: no scrolling; further down: as far as it goes, the item at the top) */
+	int above = idx < l->bagRows - 1 ? 0 : idx < maxAbove ? idx : maxAbove;
+	write_n(e, l->bagPocket, l->bagPocketSize, gp);
+	write_n(e, l->bagCursor + (uint32_t) (gp * l->bagStride), l->bagFieldSize, idx - above);
+	write_n(e, l->bagAbove + (uint32_t) (gp * l->bagStride), l->bagFieldSize, above);
 }
 
 static void bag_open_on(Emu* e, const Layout* l, int pocket, int i, int mine) {
-	if (!l || !l->bagState) return;
+	if (!l || !l->bagPocket) return;
 	int ids[64], qty[64];
 	int gp = l->gamePocket[pocket], idx = i, from = pocket;
 	if (gp < 0) {

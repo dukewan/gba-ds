@@ -49,11 +49,13 @@ LeafGreen / Emerald, European ones): no profile.
 - **PK-8 The bag.** Pockets along the top (道具, 精灵球, 树果, 学习器, 重要物品), each one's items with
   how many; past 17, 还有…个 — a tap on the list or the pocket shows the next ones. While the bag page is shown, L and R
   turn its pockets (R the next, L the one before) and the game doesn't get them (the owner, 11-23).
-  A tap on an item (FireRed / LeafGreen) opens the game's own bag on it, for the player's A — nothing is used
+  A tap on an item opens the game's own bag on it, for the player's A — nothing is used
   for them: in a battle by the action menu's BAG (as PK-12), on the overworld by START and the start menu's
   bag entry, the bag's remembered pocket and place written first. Their bag has three pockets: a berry or a TM
-  opens it on 树果袋 / 技能盒 among the key items; key items aren't offered in a battle. Elsewhere (a message,
-  another menu) nothing happens. Emerald, Ruby and Sapphire: not yet.
+  opens it on 树果袋 / 技能盒 among the key items (Emerald's, Ruby's and Sapphire's five pockets: each its own);
+  key items aren't offered in a battle. On the first screen of its list nothing is scrolled. Elsewhere (a
+  message, another menu) nothing happens. Checked in all four layouts — FireRed, Emerald, Ruby (Japan) and
+  Ruby (USA) — on the overworld (an item, a TM, a berry) and in a battle.
 - **PK-10 The PC's boxes.** The box the game has open first, ◀ ▶ for the others; its 30 places
   (small icons), how many are filled; a tap on a place shows that Pokémon — icon, name, level (from
   its experience and its species' growth rate in the ROM; none where the ROM has no base stats).
