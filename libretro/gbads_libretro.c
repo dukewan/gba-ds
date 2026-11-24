@@ -63,7 +63,11 @@ static uint32_t out[OUT_W * OUT_H];
 /* (游典) The Pokémon games: the frame at twice the size, 480 × 640 — the game at 2×, the second screen the
  * pages drawn at that size (src/poke.c), sharper than at the GBA's own (the owner: PokeDaisy's are) */
 static bool hires;
-static uint32_t outHi[OUT_W * 2 * OUT_H * 2];
+/* (游典) The lower half's height then: 320, or taller for a lower screen narrower than 3:2 — the frontend says
+ * that screen's size (the variable gbads_lower_size, "WxH": not one of the core's options, 游典 answers it), and
+ * the pages are laid out to fill it without being stretched (src/poke.c, poke_set_page_height) */
+static int pageH = GBA_H * 2;
+static uint32_t outHi[OUT_W * 2 * (GBA_H * 2 + 640)];
 static int16_t audioBuf[4096 * 2];
 
 /* GBA DS's game (src/game.c, libretro/lr_game.inc): its emulator, its second screen */
@@ -177,10 +181,10 @@ void retro_get_system_info(struct retro_system_info* info) {
 void retro_get_system_av_info(struct retro_system_av_info* info) {
 	memset(info, 0, sizeof(*info));
 	info->geometry.base_width = hires ? OUT_W * 2 : OUT_W;
-	info->geometry.base_height = hires ? OUT_H * 2 : OUT_H;
+	info->geometry.base_height = hires ? GBA_H * 2 + pageH : OUT_H;
 	info->geometry.max_width = OUT_W * 2;
-	info->geometry.max_height = OUT_H * 2;
-	info->geometry.aspect_ratio = (float) OUT_W / OUT_H;
+	info->geometry.max_height = GBA_H * 2 + 640;
+	info->geometry.aspect_ratio = hires ? (float) (OUT_W * 2) / (GBA_H * 2 + pageH) : (float) OUT_W / OUT_H;
 	info->timing.fps = GBA_FPS;
 	info->timing.sample_rate = loaded ? emu_audio_rate(&emu) : 32768;
 	avRate = (unsigned) info->timing.sample_rate;
@@ -215,6 +219,17 @@ bool retro_load_game(const struct retro_game_info* game) {
 	}
 	loaded = true;
 	hires = poke_supported(emu.gameCode);
+	pageH = GBA_H * 2;
+	if (hires) {
+		struct retro_variable var = { "gbads_lower_size", NULL };
+		int lw = 0, lh = 0;
+		if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value && sscanf(var.value, "%dx%d", &lw, &lh) == 2 && lw > 0 && lh > 0) {
+			int h = (OUT_W * 2 * lh + lw / 2) / lw;
+			pageH = h < GBA_H * 2 ? GBA_H * 2 : h > 640 ? 640 : h;
+		}
+		poke_set_page_height(pageH);
+		logf_(RETRO_LOG_INFO, "pages %dx%d (lower screen %s)", OUT_W * 2, pageH, var.value ? var.value : "not told");
+	}
 	saveAttached = false;
 	int kind = lr_kind();
 	const MapProfile* p = profile_find(emu.gameCode);
@@ -330,7 +345,7 @@ void retro_run(void) {
 		int fx = (px + 0x7FFF) * GBA_W / 0xFFFF, fy = (py + 0x7FFF) * (2 * GBA_H) / 0xFFFF - GBA_H;
 		down = down && fy >= 0;
 		/* (the Pokémon pages take them in their own 480 × 320 pixels) */
-		if (pokemon) poke_touch((px + 0x7FFF) * GBA_W * 2 / 0xFFFF, (py + 0x7FFF) * (4 * GBA_H) / 0xFFFF - 2 * GBA_H, down);
+		if (pokemon) poke_touch((px + 0x7FFF) * GBA_W * 2 / 0xFFFF, (py + 0x7FFF) * (2 * GBA_H + pageH) / 0xFFFF - 2 * GBA_H, down);
 		else if (down && !wasDown) {
 			if (touch_tap(&emu, lr_second_page(), fx, fy)) {
 				if (touch_page() >= 0) lr_second_show(touch_page());
@@ -360,18 +375,25 @@ void retro_run(void) {
 	if (hires) {
 		/* each pixel twice across and down; the lower half the pages at their own size when there's one */
 		const uint32_t* page = poke_page_hi();
-		int rows = page ? GBA_H : OUT_H;
-		for (int y = 0; y < rows; ++y) {
-			uint32_t* o = outHi + (y * 2) * OUT_W * 2;
+		const int W2 = OUT_W * 2;
+		/* the game, and without a page the second screen (the logo) too, each pixel twice across and down; the
+		 * logo centred in a taller lower half, its ground above and below */
+		int pad = page ? 0 : (pageH - GBA_H * 2) / 2;
+		uint32_t ground = out[GBA_W * GBA_H];
+		for (int y = 0; y < (page ? GBA_H : OUT_H); ++y) {
+			uint32_t* o = outHi + (y * 2 + (y >= GBA_H ? pad : 0)) * W2;
 			const uint32_t* in = out + y * OUT_W;
 			for (int x = 0; x < OUT_W; ++x) o[x * 2] = o[x * 2 + 1] = in[x];
-			memcpy(o + OUT_W * 2, o, OUT_W * 2 * sizeof(uint32_t));
+			memcpy(o + W2, o, W2 * sizeof(uint32_t));
 		}
+		uint32_t* low = outHi + GBA_H * 2 * W2;
 		if (page) {
-			uint32_t* o = outHi + GBA_H * 2 * OUT_W * 2;
-			for (int i = 0; i < GBA_W * 2 * GBA_H * 2; ++i) o[i] = dimmed ? dim(xrgb(page[i]), 120) : xrgb(page[i]);
+			for (int i = 0; i < W2 * pageH; ++i) low[i] = dimmed ? dim(xrgb(page[i]), 120) : xrgb(page[i]);
+		} else if (pad > 0) {
+			for (int i = 0; i < W2 * pad; ++i) low[i] = ground;
+			for (int i = W2 * (pad + GBA_H * 2); i < W2 * pageH; ++i) low[i] = ground;
 		}
-		video_cb(outHi, OUT_W * 2, OUT_H * 2, OUT_W * 2 * sizeof(uint32_t));
+		video_cb(outHi, W2, GBA_H * 2 + pageH, W2 * sizeof(uint32_t));
 	} else {
 		video_cb(out, OUT_W, OUT_H, OUT_W * sizeof(uint32_t));
 	}

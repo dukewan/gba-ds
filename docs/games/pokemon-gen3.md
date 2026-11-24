@@ -22,6 +22,11 @@ LeafGreen / Emerald, European ones): no profile.
 - **PK-0 Twice the size.** The pages are drawn at 480 × 320 (the frame 游典 gets is 480 × 640 for these
   games, the game at 2×): words in the 12-pixel font at its size or doubled, icons doubled where there's
   room, edges and bars in GBA pixels. Icons bob in the games' own two frames.
+- **PK-0b The lower screen's shape.** 游典 says the size of the screen the pages go to (the variable
+  gbads_lower_size, "WxH"); the pages are then 480 wide and as tall as that shape makes them (320 to 640: a
+  Thor's 1240 × 1080 lower screen, 418), so they fill it unstretched on any handheld (the owner, 11-23). The bars
+  stay at the top and bottom; the 背包 and 图鉴 show more rows, the map is taller, the party's cards spread
+  out, the battle, a member in full and the boxes are centred. Not told (another frontend, one screen): 320.
 - **PK-2 The bars.** Along the bottom six tabs — 队伍, 对战, 地图, 图鉴, 箱子, 背包 — a tap on one shows its
   page (对战 only in a battle); along the top eight badge gems, lit as they're won, the play time, the
   player's money (…元).

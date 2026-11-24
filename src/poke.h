@@ -47,7 +47,11 @@ uint32_t poke_keys(void);
 /* The player's own keys this frame, before the game gets them: while the 背包 page is shown, L and R turn
  * its pockets (R the next, L the one before) and the game doesn't get them; otherwise as they are. */
 uint32_t poke_player_keys(uint32_t keys);
-/* The page at twice the GBA's size, 480 × 320 (ABGR8888), as poke_live_view last drew it this frame; NULL
+/* The page's height, 320 (the GBA's shape at twice its size) to 640: taller for a lower screen narrower than
+ * 3:2, the width staying 480. Its pages fill it (more rows; what can't grow, centred). */
+void poke_set_page_height(int h);
+int poke_page_height(void);
+/* The page, 480 × poke_page_height() (ABGR8888), as poke_live_view last drew it this frame; NULL
  * when there's none (the logo). poke_live_view's own picture is it at 240 × 160. Taps (poke_touch) are in
  * its pixels. */
 const uint32_t* poke_page_hi(void);

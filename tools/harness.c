@@ -249,7 +249,7 @@ int main(int argc, char** argv) {
 			else {
 				char path[512];
 				snprintf(path, sizeof(path), "%s/%s.png", outdir, a1);
-				write_png(path, hi, 480, 320, 480);
+				write_png(path, hi, 480, poke_page_height(), 480);
 				printf("livehi %s: written\n", a1);
 			}
 		} else if (!strcmp(cmd, "tap2")) {
@@ -268,6 +268,9 @@ int main(int argc, char** argv) {
 				if (lp && lp->liveView) lp->liveView(&emu, argv[1]);
 				run(poke_keys(), 1);
 			}
+		} else if (!strcmp(cmd, "pageh")) {
+			/* pageh N: the Pokémon pages N rows tall (a lower screen of another shape) */
+			poke_set_page_height(atoi(a1));
 		} else if (!strcmp(cmd, "pokehold")) {
 			/* pokehold KEYS N: N frames with the player holding KEYS, as the core passes them (poke_player_keys) */
 			const MapProfile* lp = profile_find(emu.gameCode);

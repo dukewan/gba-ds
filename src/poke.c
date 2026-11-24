@@ -413,16 +413,25 @@ static int badges_of(Emu* e, const Layout* l) {
 
 #define RGB(r, g, b) (0xFF000000u | (uint32_t) (b) << 16 | (uint32_t) (g) << 8 | (uint32_t) (r))
 #define HW 480
-#define HH 320
+#define HH_MAX 640
+/* The page's height: 320 (the GBA's shape, doubled), or taller to fill a lower screen of another shape
+ * (poke_set_page_height): the bars stay at the top and bottom, the pages use the rows between — more of a
+ * list, a taller map, or what they show centred (dy). */
+static int hh = 320;
+#define HH hh
+#define EXTRA (hh - 320)
 
 static uint32_t* px;
+static int dy; /* a page drawn centred in a taller one: its rows moved down this far */
 
 static void put(int x, int y, uint32_t c) {
+	y += dy;
 	if (px && x >= 0 && x < HW && y >= 0 && y < HH) px[y * HW + x] = c;
 }
 
 static void fill(int x0, int y0, int x1, int y1, uint32_t c) {
 	if (!px) return;
+	y0 += dy, y1 += dy;
 	if (x0 < 0) x0 = 0;
 	if (y0 < 0) y0 = 0;
 	if (x1 >= HW) x1 = HW - 1;
@@ -723,7 +732,7 @@ void poke_touch(int x, int y, bool down) {
 }
 
 #define TOP 32      /* the bar along the top's height */
-#define TABS_Y 278  /* the tabs along the bottom */
+#define TABS_Y (hh - 42) /* the tabs along the bottom */
 #define TAB_W 78
 
 static int tab_x(int i) {
@@ -791,7 +800,8 @@ static void tabs(void) {
 static int animFrame; /* the icons' two frames, in turn (as the games' own party screens bob them) */
 
 static void party_card(Emu* e, const Mon* m, int i) {
-	int x = 4 + (i % 2) * 238, y = TOP + 3 + (i / 2) * 81, w = 234, h = 78;
+	int pitch = 81 + EXTRA / 3;
+	int x = 4 + (i % 2) * 238, y = TOP + 3 + (i / 2) * pitch + (pitch - 81) / 2, w = 234, h = 78;
 	bool fainted = !m->egg && !m->hp;
 	panel(x, y, w, h, i == 0 ? orange : navy, fainted ? RGB(208, 200, 192) : cream);
 	icon_draw(e, m->egg ? 412 : m->species, x + 4, y + 7, 2, fainted ? 0 : animFrame, fainted ? 1 : 0);
@@ -974,7 +984,7 @@ static void page_battle(Emu* e, const Battler* bat, int nBat, int mine, const Mo
 
 #define DEX_N 386
 #define DEX_COLS 9
-#define DEX_ROWS 4
+#define DEX_ROWS (4 + EXTRA / DEX_CH)
 #define DEX_PER (DEX_COLS * DEX_ROWS)
 #define DEX_Y (TOP + 34)
 #define DEX_CW 52
@@ -1119,15 +1129,16 @@ static TileSet* tileset_load(Emu* e, uint32_t at, int slot) {
 }
 
 #define MAP_Y (TOP + 3)
-#define MAP_H 242
+#define MAP_H (242 + EXTRA)
 
 /* the map drawn without the player, kept until the map or the view changes (drawing it is the slow part:
  * the dot is drawn over a copy each time) */
-static uint32_t mapBase[472 * MAP_H];
+static uint32_t mapBase[472 * (242 + HH_MAX - 320)];
 static struct {
 	uint32_t layout;
 	int vx, vy, ox, oy, dw, dh;
 	double sc;
+	int ah;
 	bool valid;
 } mapCache;
 
@@ -1171,7 +1182,7 @@ static void page_map(Emu* e, const Layout* l, uint32_t* key) {
 		if (vy < 0) vy = 0;
 	}
 	int ox = (aw - dw) / 2, oy = (ah - dh) / 2;
-	if (!(mapCache.valid && mapCache.layout == layout && mapCache.vx == vx && mapCache.vy == vy && mapCache.sc == sc)) {
+	if (!(mapCache.valid && mapCache.layout == layout && mapCache.vx == vx && mapCache.vy == vy && mapCache.sc == sc && mapCache.ah == ah)) {
 		TileSet* t0 = tileset_load(e, p0, 0);
 		TileSet* t1 = tileset_load(e, p1, 1);
 		if (!t0 || !t1) return;
@@ -1202,7 +1213,7 @@ static void page_map(Emu* e, const Layout* l, uint32_t* key) {
 				mapBase[(oy + y) * aw + ox + x] = c;
 			}
 		}
-		mapCache = (typeof(mapCache)) { layout, vx, vy, ox, oy, dw, dh, sc, true };
+		mapCache = (typeof(mapCache)) { layout, vx, vy, ox, oy, dw, dh, sc, ah, true };
 	}
 	for (int y = 0; y < ah; ++y) memcpy(px + (ay + y) * HW + ax, mapBase + y * aw, (size_t) aw * 4);
 	/* the player: a red dot with a white ring, pulsing */
@@ -1375,11 +1386,11 @@ static void page_bag(Emu* e, const Layout* l, uint32_t* key) {
 		panel(x, TOP + 3, w, 32, on ? orange : navy, on ? cream : RGB(80, 104, 168));
 		text(x + 6, TOP + 7, pocketNames[i], on ? ink : white, on ? soft : RGB(40, 56, 96), 2);
 	}
-	enum { ROWS = 7, PER = ROWS * 2 };
+	int ROWS = 7 + EXTRA / 28, PER = ROWS * 2;
 	if (ui.bagStart >= n) ui.bagStart = 0;
-	panel(4, TOP + 38, 472, 206, navy, cream);
+	panel(4, TOP + 38, 472, 206 + EXTRA, navy, cream);
 	if (!n) {
-		text_mid(HW / 2, TOP + 128, "空", RGB(144, 144, 152), 0, 2);
+		text_mid(HW / 2, TOP + 128 + EXTRA / 2, "空", RGB(144, 144, 152), 0, 2);
 		return;
 	}
 	int shown = n - ui.bagStart > PER ? PER - 1 : n - ui.bagStart;
@@ -1589,11 +1600,13 @@ static void take_tap(Emu* e, const Battler* bat, int mine) {
 		if (i >= 0 && i < N_PAGES && !(i == PAGE_BATTLE && !ui.inBattle)) ui.page = i, ui.summary = -1;
 		return;
 	}
+	/* (the pages drawn centred in a taller one: in their own rows) */
+	if (ui.page == PAGE_BATTLE || ui.page == PAGE_BOX) y -= EXTRA / 2;
 	if (ui.page == PAGE_PARTY) {
 		/* a card: that one in full; again (anywhere): back to the party */
 		if (ui.summary >= 0) ui.summary = -1;
 		else if (y >= TOP + 3) {
-			int c = x >= 240, r = (y - TOP - 3) / 81;
+			int c = x >= 240, r = (y - TOP - 3) / (81 + EXTRA / 3);
 			if (r < 3) ui.summary = r * 2 + c;
 		}
 		return;
@@ -1637,7 +1650,7 @@ static void take_tap(Emu* e, const Battler* bat, int mine) {
 		if (y < TOP + 36) {
 			for (int i = 4; i >= 0; --i)
 				if (x >= pocketX[i]) {
-					if (ui.pocket == i) ui.bagStart += 13;
+					if (ui.pocket == i) ui.bagStart += (7 + EXTRA / 28) * 2 - 1;
 					else ui.pocket = i, ui.bagStart = 0;
 					ui.bagPick = -1;
 					return;
@@ -1645,20 +1658,21 @@ static void take_tap(Emu* e, const Battler* bat, int mine) {
 		}
 		/* an item: the game's bag opened on it; elsewhere on the list (还有…个): its next items */
 		int ids[64], qty[64], n = rom.lay ? pocket_list(e, rom.lay, ui.pocket, ids, qty, NULL) : 0;
-		int row = (y - (TOP + 42)) / 28, col = x >= 240 ? 1 : 0, j = col * 7 + row;
-		int shown = n - ui.bagStart > 14 ? 13 : n - ui.bagStart;
-		if (y >= TOP + 42 && row < 7 && j < shown) {
+		int rows = 7 + EXTRA / 28;
+		int row = (y - (TOP + 42)) / 28, col = x >= 240 ? 1 : 0, j = col * rows + row;
+		int shown = n - ui.bagStart > rows * 2 ? rows * 2 - 1 : n - ui.bagStart;
+		if (y >= TOP + 42 && row < rows && j < shown) {
 			ui.bagPick = ui.bagStart + j;
 			bag_open_on(e, rom.lay, ui.pocket, ui.bagPick, mine);
 			return;
 		}
-		ui.bagStart += 13, ui.bagPick = -1;
+		ui.bagStart += rows * 2 - 1, ui.bagPick = -1;
 	}
 }
 
 /* ------------------------------------------------------------------ the page */
 
-static uint32_t hiOut[HW * HH];
+static uint32_t hiOut[HW * HH_MAX];
 static bool hiValid;
 
 uint32_t poke_player_keys(uint32_t keys) {
@@ -1669,6 +1683,18 @@ uint32_t poke_player_keys(uint32_t keys) {
 	if (down & K_R) ui.pocket = (ui.pocket + 1) % 5, ui.bagStart = 0, ui.bagPick = -1;
 	if (down & K_L) ui.pocket = (ui.pocket + 4) % 5, ui.bagStart = 0, ui.bagPick = -1;
 	return keys & ~(uint32_t) (K_L | K_R);
+}
+
+void poke_set_page_height(int h) {
+	if (h < 320) h = 320;
+	if (h > HH_MAX) h = HH_MAX;
+	if (h == hh) return;
+	hh = h;
+	mapCache.valid = false;
+}
+
+int poke_page_height(void) {
+	return hh;
 }
 
 const uint32_t* poke_page_hi(void) {
@@ -1734,6 +1760,7 @@ const uint32_t* poke_live_view(Emu* e, const char* romPath) {
 	key = (key ^ (uint32_t) badges_of(e, l)) * 16777619u;
 	if (sb2 >> 24 == 0x02) key = (key ^ (uint32_t) (emu_read16(e, sb2 + 0x0E) << 8 | emu_read8(e, sb2 + 0x10))) * 16777619u;
 	key = (key ^ (uint32_t) (ui.page | ui.inBattle << 4 | mine << 5 | nBat << 8 | canAct << 12 | animFrame << 13 | (ui.summary + 1) << 16)) * 16777619u;
+	key = (key ^ (uint32_t) hh) * 16777619u;
 	/* (a page's contents in the key too: read without drawing first) */
 	px = NULL;
 	if (ui.page == PAGE_BAG) page_bag(e, l, &key);
@@ -1750,7 +1777,9 @@ const uint32_t* poke_live_view(Emu* e, const char* romPath) {
 	uint32_t k2 = 0;
 	switch (ui.page) {
 	case PAGE_BATTLE:
+		dy = EXTRA / 2;
 		page_battle(e, bat, nBat, mine, team, nTeam, canAct);
+		dy = 0;
 		break;
 	case PAGE_DEX:
 		page_dex(e, l, &k2);
@@ -1759,20 +1788,22 @@ const uint32_t* poke_live_view(Emu* e, const char* romPath) {
 		page_map(e, l, &k2);
 		break;
 	case PAGE_BOX:
+		dy = EXTRA / 2;
 		page_box(e, l, &k2);
+		dy = 0;
 		break;
 	case PAGE_BAG:
 		page_bag(e, l, &k2);
 		break;
 	default:
-		if (ui.summary >= 0 && ui.summary < n) party_summary(e, &mons[ui.summary]);
+		if (ui.summary >= 0 && ui.summary < n) dy = EXTRA / 2, party_summary(e, &mons[ui.summary]), dy = 0;
 		else
 			for (int i = 0; i < n; ++i) party_card(e, &mons[i], i);
 	}
 	tabs();
 	/* (240 × 160 for a frontend that takes the second screen at the GBA's size: every other pixel) */
 	for (int y = 0; y < 160; ++y)
-		for (int x = 0; x < 240; ++x) lo[y * 240 + x] = hiOut[(y * 2) * HW + x * 2];
+		for (int x = 0; x < 240; ++x) lo[y * 240 + x] = hiOut[(y * hh / 160) * HW + x * 2];
 	lastKey = key;
 	have = true;
 	hiValid = true;
